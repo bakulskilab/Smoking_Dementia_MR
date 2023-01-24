@@ -1,0 +1,536 @@
+---
+title: "0_preprocessing"
+author: "Joy_Fu"
+date: "2023-01-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part 1. Preprocessing of HRS
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse, haven)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+source("func_used.R")
+```
+
+## 1. Smoking variables -- smoke_combined
+```{r}
+# Read in SAS data
+smk_vars = c("C116", "C117", "C118", "C120", "C121", "C122", "C123", "C125", "C126", "C127")
+smk18 = read_sas(paste0(work_data_path, "raw_hrs/h18c_r.sas7bdat"))
+smk18_short = smk18 %>% select("HHID", "PN", paste0("Q", smk_vars))
+smk16 = read_sas(paste0(work_data_path, "raw_hrs/h16c_r.sas7bdat"))
+smk16_short = smk16 %>% select("HHID", "PN", paste0("P", smk_vars))
+smk14 = read_sas(paste0(work_data_path, "raw_hrs/h14c_r.sas7bdat"))
+smk14_short = smk14 %>% select("HHID", "PN", paste0("O", smk_vars))
+smk12 = read_sas(paste0(work_data_path, "raw_hrs/h12c_r.sas7bdat"))
+smk12_short = smk12 %>% select("HHID", "PN", paste0("N", smk_vars))
+smk10 = read_sas(paste0(work_data_path, "raw_hrs/h10c_r.sas7bdat"))
+smk10_short = smk10 %>% select("HHID", "PN", paste0("M", smk_vars))
+smk08 = read_sas(paste0(work_data_path, "raw_hrs/h08c_r.sas7bdat"))
+smk08_short = smk08 %>% select("HHID", "PN", paste0("L", smk_vars))
+smk06 = read_sas(paste0(work_data_path, "raw_hrs/h06c_r.sas7bdat"))
+smk06_short = smk06 %>% select("HHID", "PN", paste0("K", smk_vars))
+smk04 = read_sas(paste0(work_data_path, "raw_hrs/h04c_r.sas7bdat"))
+smk04_short = smk04 %>% select("HHID", "PN", paste0("J", smk_vars))
+smk02 = read_sas(paste0(work_data_path, "raw_hrs/h02c_r.sas7bdat"))
+smk02_short = smk02 %>% select("HHID", "PN", paste0("H", smk_vars))
+# 95-00 waves var names are different
+smk00 = read_sas(paste0(work_data_path, "raw_hrs/h00b_r.sas7bdat"))
+smk00_short = smk00 %>% select("HHID", "PN", "G1399", "G1400", "G1401", "G1404", "G1405", "G1406", "G1408", "G1411", "G1412", "G1413")
+smk98 = read_sas(paste0(work_data_path, "raw_hrs/h98b_r.sas7bdat"))
+smk98_short = smk98 %>% select("HHID", "PN", "F1266", "F1267", "F1268", "F1271", "F1272", "F1273", "F1275", "F1278", "F1279", "F1280")
+smk96 = read_sas(paste0(work_data_path, "raw_hrs/h96b_r.sas7bdat"))
+smk96_short = smk96 %>% select("HHID", "PN", "E942")
+smk95 = read_sas(paste0(work_data_path, "raw_hrs/a95b_r.sas7bdat"))
+smk95_short = smk95 %>% select("HHID", "PN", "D942", "D943")
+# Combine needed variables
+smoke_combined = smk95_short %>% full_join(smk96_short) %>% full_join(smk98_short) %>% full_join(smk00_short) %>% full_join(smk02_short) %>%
+  full_join(smk04_short) %>% full_join(smk06_short) %>% full_join(smk08_short) %>% full_join(smk10_short) %>% 
+  full_join(smk12_short) %>% full_join(smk14_short) %>% full_join(smk16_short) %>% full_join(smk18_short)
+rm(list = ls()[grep("^smk", ls())])
+```
+
+## 2. Cognition variables -- cognition_combined
+```{r}
+# We have a pre-processed version for HRS 1998-2018 data
+load('/Users/Mingzhou/Desktop/AD_Grant/Discrete_Tasks/Preprocessing_HRS/output/merge_cognition_9818.rda')
+# Load in the wide-HRS data
+load('/Users/Mingzhou/Desktop/AD_Grant/HRS_raw/hrs_democoggen_wide20200910.Rda')
+hrs_genetic_avail = hrs0910 %>% filter(!is.na(PC1_5A) & !is.na(BIRTHYR) & !is.na(GENDER)) %>% select(HHID, PN)
+dim(hrs_genetic_avail) # dim = (15190,2)
+# Define waves
+cognition_combined = merge_cognition %>% inner_join(hrs_genetic_avail) %>% 
+  mutate(cog_last_visit = case_when(
+    !is.na(cogfunction2018) ~ cogfunction2018,
+    !is.na(cogfunction2016) ~ cogfunction2016,
+    !is.na(cogfunction2014) ~ cogfunction2014,
+    !is.na(cogfunction2012) ~ cogfunction2012,
+    !is.na(cogfunction2010) ~ cogfunction2010,
+    !is.na(cogfunction2008) ~ cogfunction2008,
+    !is.na(cogfunction2006) ~ cogfunction2006,
+    !is.na(cogfunction2004) ~ cogfunction2004,
+    !is.na(cogfunction2002) ~ cogfunction2002,
+    !is.na(cogfunction2000) ~ cogfunction2000,
+    !is.na(cogfunction1998) ~ cogfunction1998,
+    !is.na(cogfunction1996) ~ cogfunction1996,
+    !is.na(cogfunction1995) ~ cogfunction1995
+  )) %>% 
+  mutate(last_cog_wave = case_when(
+    !is.na(cogfunction2018) ~ "2018",
+    !is.na(cogfunction2016) ~ "2016",
+    !is.na(cogfunction2014) ~ "2014",
+    !is.na(cogfunction2012) ~ "2012",
+    !is.na(cogfunction2010) ~ "2010",
+    !is.na(cogfunction2008) ~ "2008",
+    !is.na(cogfunction2006) ~ "2006",
+    !is.na(cogfunction2004) ~ "2004",
+    !is.na(cogfunction2002) ~ "2002",
+    !is.na(cogfunction2000) ~ "2000",
+    !is.na(cogfunction1998) ~ "1998",
+    !is.na(cogfunction1996) ~ "1996",
+    !is.na(cogfunction1995) ~ "1995"
+  )) %>% select(HHID, PN, cog_last_visit, last_cog_wave)
+table(cognition_combined$cog_last_visit, useNA = "ifany")
+table(cognition_combined$last_cog_wave, useNA = "ifany")
+```
+
+## 3. Merge with other covariates -- cog_rand_clean
+```{r}
+# Read HRS RAND Raw File into R
+raw_hrs_rand = read_sas("~/Desktop/AD_Grant/Discrete_Tasks/epigen_cog/data/randhrs1992_2018v2_SAS/randhrs1992_2018v2.sas7bdat")
+# Select useful vars from the big dataset
+selected_columns = c("HHIDPN", "RABYEAR", "RAGENDER", "RARACEM", "RAHISPAN", "RAEDYRS", 
+                     paste0("R", c(8:14), "SMOKEV"), paste0("R", c(8:14), "SMOKEN"), paste0("R", c(8:14), "DRINK"),
+                     paste0("R", c(8:14), "PROXY"), paste0("R", c(8:14), "BMI"), paste0("R", c(8:14), "CESD"), 
+                     paste0("R", c(8:14), "HIBP"), paste0("R", c(8:14), "DIAB"), paste0("R", c(8:14), "STROK"))
+hrs_rand_combine = raw_hrs_rand[, selected_columns]
+cog_rand_clean = hrs_rand_combine %>% 
+  mutate(HHIDPN_full = str_pad(HHIDPN, 9, pad = "0")) %>% 
+  mutate(HHID = substr(HHIDPN_full, 1, 6), PN = substr(HHIDPN_full, 7, 9)) %>% 
+  rename(birth_year = RABYEAR) %>% right_join(cognition_combined) %>% 
+  mutate(gender = if_else(RAGENDER == 1, 0, 1)) %>% 
+  mutate(race = RARACEM - 1) %>% rename(ethnicity = RAHISPAN, education = RAEDYRS) %>% 
+  mutate(age = case_when(
+    last_cog_wave == "2018" ~ 2018 - birth_year,
+    last_cog_wave == "2016" ~ 2016 - birth_year,
+    last_cog_wave == "2014" ~ 2014 - birth_year,
+    last_cog_wave == "2012" ~ 2012 - birth_year,
+    last_cog_wave == "2010" ~ 2010 - birth_year,
+    last_cog_wave == "2008" ~ 2008 - birth_year,
+    last_cog_wave == "2006" ~ 2006 - birth_year
+  )) %>% 
+  mutate(proxy = case_when(
+    last_cog_wave == "2018" ~ R14PROXY,
+    last_cog_wave == "2016" ~ R13PROXY,
+    last_cog_wave == "2014" ~ R12PROXY,
+    last_cog_wave == "2012" ~ R11PROXY,
+    last_cog_wave == "2010" ~ R10PROXY,
+    last_cog_wave == "2008" ~ R9PROXY,
+    last_cog_wave == "2006" ~ R8PROXY
+  )) %>% 
+  mutate(ever_smoke = case_when(
+    last_cog_wave == "2018" ~ R14SMOKEV,
+    last_cog_wave == "2016" ~ R13SMOKEV,
+    last_cog_wave == "2014" ~ R12SMOKEV,
+    last_cog_wave == "2012" ~ R11SMOKEV,
+    last_cog_wave == "2010" ~ R10SMOKEV,
+    last_cog_wave == "2008" ~ R9SMOKEV,
+    last_cog_wave == "2006" ~ R8SMOKEV
+  )) %>% 
+  mutate(current_smoke = case_when(
+    last_cog_wave == "2018" ~ R14SMOKEN,
+    last_cog_wave == "2016" ~ R13SMOKEN,
+    last_cog_wave == "2014" ~ R12SMOKEN,
+    last_cog_wave == "2012" ~ R11SMOKEN,
+    last_cog_wave == "2010" ~ R10SMOKEN,
+    last_cog_wave == "2008" ~ R9SMOKEN,
+    last_cog_wave == "2006" ~ R8SMOKEN
+  )) %>% 
+  mutate(ever_drink = case_when(
+    last_cog_wave == "2018" ~ R14DRINK,
+    last_cog_wave == "2016" ~ R13DRINK,
+    last_cog_wave == "2014" ~ R12DRINK,
+    last_cog_wave == "2012" ~ R11DRINK,
+    last_cog_wave == "2010" ~ R10DRINK,
+    last_cog_wave == "2008" ~ R9DRINK,
+    last_cog_wave == "2006" ~ R8DRINK
+  )) %>% 
+  mutate(bmi = case_when(
+    last_cog_wave == "2018" ~ R14BMI,
+    last_cog_wave == "2016" ~ R13BMI,
+    last_cog_wave == "2014" ~ R12BMI,
+    last_cog_wave == "2012" ~ R11BMI,
+    last_cog_wave == "2010" ~ R10BMI,
+    last_cog_wave == "2008" ~ R9BMI,
+    last_cog_wave == "2006" ~ R8BMI
+  )) %>% 
+  mutate(hypertension = case_when(
+    last_cog_wave == "2018" ~ R14HIBP,
+    last_cog_wave == "2016" ~ R13HIBP,
+    last_cog_wave == "2014" ~ R12HIBP,
+    last_cog_wave == "2012" ~ R11HIBP,
+    last_cog_wave == "2010" ~ R10HIBP,
+    last_cog_wave == "2008" ~ R9HIBP,
+    last_cog_wave == "2006" ~ R8HIBP
+  )) %>% 
+  mutate(diabetes = case_when(
+    last_cog_wave == "2018" ~ R14DIAB,
+    last_cog_wave == "2016" ~ R13DIAB,
+    last_cog_wave == "2014" ~ R12DIAB,
+    last_cog_wave == "2012" ~ R11DIAB,
+    last_cog_wave == "2010" ~ R10DIAB,
+    last_cog_wave == "2008" ~ R9DIAB,
+    last_cog_wave == "2006" ~ R8DIAB
+  )) %>% 
+  mutate(stroke = case_when(
+    last_cog_wave == "2018" ~ R14STROK,
+    last_cog_wave == "2016" ~ R13STROK,
+    last_cog_wave == "2014" ~ R12STROK,
+    last_cog_wave == "2012" ~ R11STROK,
+    last_cog_wave == "2010" ~ R10STROK,
+    last_cog_wave == "2008" ~ R9STROK,
+    last_cog_wave == "2006" ~ R8STROK
+  )) %>% 
+  select(HHID, PN, last_cog_wave, birth_year, age, gender, race, ethnicity, education, proxy, 
+         cog_last_visit, ever_smoke, current_smoke, ever_drink, bmi, hypertension, diabetes, stroke)
+dim(cog_rand_clean) # dim = c(15190,18)
+```
+
+```{r}
+# Merge with smoking variables
+cog_smk_combined = cog_rand_clean %>% 
+  left_join(smoke_combined) %>% 
+  mutate(cig_now_pre = case_when(
+    last_cog_wave == "2018" ~ QC118,
+    last_cog_wave == "2016" ~ PC118,
+    last_cog_wave == "2014" ~ OC118,
+    last_cog_wave == "2012" ~ NC118,
+    last_cog_wave == "2010" ~ MC118,
+    last_cog_wave == "2008" ~ LC118,
+    last_cog_wave == "2006" ~ KC118
+  )) %>% 
+  mutate(cig_now = case_when(
+    !is.na(cig_now_pre) & (cig_now_pre %!in% c(98,99,998)) ~ cig_now_pre
+  )) %>% 
+  mutate(age_start_smk_pre = pmax(QC120, PC120, OC120, NC120, MC120, LC120, KC120, JC120, HC120, F1271, G1404, na.rm = T)) %>% 
+  mutate(yr_start_smk = pmax(QC121, PC121, OC121, NC121, MC121, LC121, KC121, JC121, HC121, F1272, G1405, na.rm = T)) %>%
+  mutate(yrago_start_smk = case_when(
+    !is.na(QC122) & (QC122 %!in% c(98,99)) ~ 2018 - QC122,
+    !is.na(PC122) & (PC122 %!in% c(98,99)) ~ 2016 - PC122,
+    !is.na(OC122) & (OC122 %!in% c(98,99)) ~ 2014 - OC122,
+    !is.na(NC122) & (NC122 %!in% c(98,99)) ~ 2012 - NC122,
+    !is.na(MC122) & (MC122 %!in% c(98,99)) ~ 2010 - MC122,
+    !is.na(LC122) & (LC122 %!in% c(98,99)) ~ 2008 - LC122,
+    !is.na(KC122) & (KC122 %!in% c(98,99)) ~ 2006 - KC122,
+    !is.na(JC122) & (JC122 %!in% c(98,99)) ~ 2004 - JC122,
+    !is.na(HC122) & (HC122 %!in% c(98,99)) ~ 2002 - HC122,
+    !is.na(G1406) & (G1406 %!in% c(98,99)) ~ 2000 - G1406,
+    !is.na(F1273) & (F1273 %!in% c(98,99)) ~ 1998 - F1273
+  )) %>%
+  mutate(age_start_smk = case_when(
+    !is.na(age_start_smk_pre) & (age_start_smk_pre %!in% c(95,98,99)) ~ age_start_smk_pre,
+    !is.na(yr_start_smk) & (yr_start_smk %!in% c(9998,9999)) ~ yr_start_smk - birth_year,
+    !is.na(yrago_start_smk) ~ yrago_start_smk - birth_year
+  )) %>% 
+  mutate(yrs_since_start = age - age_start_smk) %>% 
+  mutate(cig_most_pre = pmax(QC123, PC123, OC123, NC123, MC123, LC123, KC123, JC123, HC123, F1275, G1408, na.rm = T)) %>% 
+  mutate(cig_most = case_when(
+    !is.na(cig_most_pre) & (cig_most_pre %!in% c(98,99,995,998,999)) ~ cig_most_pre
+  )) %>% 
+  mutate(age_stop_smk_pre = pmax(QC127, PC127, OC127, NC127, MC127, LC127, KC127, JC127, HC127, F1280, G1413, na.rm = T)) %>% 
+  mutate(yr_stop_smk = pmax(QC126, PC126, OC126, NC126, MC126, LC126, KC126, JC126, HC126, F1279, G1412, na.rm = T)) %>%
+  mutate(yrago_stop_smk = case_when(
+    QC125 == 96 ~ 2018, PC125 == 96 ~ 2016, OC125 == 96 ~ 2014, NC125 == 96 ~ 2012, MC125 == 96 ~ 2010,
+    LC125 == 96 ~ 2008, KC125 == 96 ~ 2006, JC125 == 96 ~ 2004, HC125 == 96 ~ 2002, G1413 == 96 ~ 2000, F1280 == 96 ~ 1998,
+    !is.na(QC125) & (QC125 %!in% c(95,96,98,99)) ~ 2018 - QC125,
+    !is.na(PC125) & (PC125 %!in% c(95,96,98,99)) ~ 2016 - PC125,
+    !is.na(OC125) & (OC125 %!in% c(95,96,98,99)) ~ 2014 - OC125,
+    !is.na(NC125) & (NC125 %!in% c(95,96,98,99)) ~ 2012 - NC125,
+    !is.na(MC125) & (MC125 %!in% c(95,96,98,99)) ~ 2010 - MC125,
+    !is.na(LC125) & (LC125 %!in% c(95,96,98,99)) ~ 2008 - LC125,
+    !is.na(KC125) & (KC125 %!in% c(95,96,98,99)) ~ 2006 - KC125,
+    !is.na(JC125) & (JC125 %!in% c(95,96,98,99)) ~ 2004 - JC125,
+    !is.na(HC125) & (HC125 %!in% c(95,96,98,99)) ~ 2002 - HC125,
+    !is.na(G1413) & (G1413 %!in% c(95,96,98,99)) ~ 2000 - G1411,
+    !is.na(F1280) & (F1280 %!in% c(95,96,98,99)) ~ 1998 - F1278
+  )) %>%
+  mutate(age_stop_smk = case_when(
+    age_stop_smk_pre == 96 ~ age,
+    !is.na(age_stop_smk_pre) & (age_stop_smk_pre %!in% c(96,98,99)) ~ age_stop_smk_pre,
+    !is.na(yr_stop_smk) & (yr_stop_smk %!in% c(9998,9999)) ~ yr_stop_smk - birth_year,
+    !is.na(yrago_stop_smk) ~ yrago_stop_smk - birth_year
+  )) %>% 
+  mutate(yrs_since_stop = age - age_stop_smk) %>% 
+  mutate(total_smk_yr = case_when(
+    current_smoke == 1 ~ yrs_since_start,
+    ever_smoke == 1 & current_smoke == 0 ~ yrs_since_start - yrs_since_stop
+  )) %>% 
+  select(HHID, PN, birth_year, age, last_cog_wave, gender, race, ethnicity, education, proxy, cog_last_visit, 
+         ever_smoke, current_smoke, cig_now, age_start_smk, yrs_since_start, age_stop_smk, yrs_since_stop, total_smk_yr, cig_most, 
+         ever_drink, bmi, hypertension, diabetes, stroke)
+dim(cog_smk_combined) # dim = c(15190,25)
+save(cog_smk_combined, file = paste0(work_data_path, "clean_df/cog_smk_combined_0116.rda"))
+```
+
+# Part 2. Genetic variables
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse, GenomicRanges, rtracklayer, bigsnpr, bigreadr, data.table, haven)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+source("func_used.R")
+```
+
+## 1. Independent significant SNPs
+```{r}
+SI_sig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/SmokingInitiation.txt"), header = T, sep = "\t", fill = T)
+SI_sig_add = SI_sig %>% separate(uniqID, c("CHR", "POS", "ALT", "REF")) %>% 
+  mutate(chr_pos_name1 = paste0(chr, ":", pos, ":", ALT, ":", REF),
+         chr_pos_name2 = paste0(chr, ":", pos, ":", REF, ":", ALT))
+name1_out = SI_sig_add %>% pull(chr_pos_name1) %>% unique()
+name2_out = SI_sig_add %>% pull(chr_pos_name2) %>% unique()
+name_out_SI = c(name1_out, name2_out) %>% unique()
+length(name_out_SI) # length = 602
+# Write output for snp extraction on server
+write.table(name_out_SI, file = paste0(work_data_path, "sumstats/sig_snps/candidate_SI_wdup.txt"),
+            sep = "\t", quote = F, row.names = F, col.names = F)
+```
+
+```{r}
+CPD_sig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/CigarettesPerDay.txt"), header = T, sep = "\t", fill = T)
+CPD_sig_add = CPD_sig %>% separate(uniqID, c("CHR", "POS", "ALT", "REF")) %>% 
+  mutate(chr_pos_name1 = paste0(chr, ":", pos, ":", ALT, ":", REF),
+         chr_pos_name2 = paste0(chr, ":", pos, ":", REF, ":", ALT))
+name1_out = CPD_sig_add %>% pull(chr_pos_name1) %>% unique()
+name2_out = CPD_sig_add %>% pull(chr_pos_name2) %>% unique()
+name_out_CPD = c(name1_out, name2_out) %>% unique()
+length(name_out_CPD) # length = 432
+# Write output for snp extraction on server
+write.table(name_out_CPD, file = paste0(work_data_path, "sumstats/sig_snps/candidate_CPD_wdup.txt"),
+            sep = "\t", quote = F, row.names = F, col.names = F)
+```
+
+```{r}
+AI_sig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/AgeInitiation.txt"), header = T, sep = "\t", fill = T)
+AI_sig_add = AI_sig %>% separate(uniqID, c("CHR", "POS", "ALT", "REF")) %>% 
+  mutate(chr_pos_name1 = paste0(chr, ":", pos, ":", ALT, ":", REF),
+         chr_pos_name2 = paste0(chr, ":", pos, ":", REF, ":", ALT))
+name1_out = AI_sig_add %>% pull(chr_pos_name1) %>% unique()
+name2_out = AI_sig_add %>% pull(chr_pos_name2) %>% unique()
+name_out_AI = c(name1_out, name2_out) %>% unique()
+length(name_out_AI) # length = 30
+# Write output for snp extraction on server
+write.table(name_out_AI, file = paste0(work_data_path, "sumstats/sig_snps/candidate_AI_wdup.txt"),
+            sep = "\t", quote = F, row.names = F, col.names = F)
+```
+
+```{r}
+SC_sig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/SmokingCessation.txt"), header = T, sep = "\t", fill = T)
+SC_sig_add = SC_sig %>% separate(uniqID, c("CHR", "POS", "ALT", "REF")) %>% 
+  mutate(chr_pos_name1 = paste0(chr, ":", pos, ":", ALT, ":", REF),
+         chr_pos_name2 = paste0(chr, ":", pos, ":", REF, ":", ALT))
+name1_out = SC_sig_add %>% pull(chr_pos_name1) %>% unique()
+name2_out = SC_sig_add %>% pull(chr_pos_name2) %>% unique()
+name_out_SC = c(name1_out, name2_out) %>% unique()
+length(name_out_SC) # length = 80
+# Write output for snp extraction on server
+write.table(name_out_SC, file = paste0(work_data_path, "sumstats/sig_snps/candidate_SC_wdup.txt"),
+            sep = "\t", quote = F, row.names = F, col.names = F)
+```
+
+Run extract_snps.sh to get plink files
+
+## 2. Constructing PGSs
+```{r}
+geno_file = paste0(work_data_path, 'genome/chrALL.indsig.SI')
+snp_readBed(paste0(geno_file, '.bed'))
+obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
+# extract the SNP information from the genotype
+map = obj.bigSNP$map[-3]
+names(map) = c("chr", "rsid", "pos", "a1", "a0")
+genotype = obj.bigSNP$genotypes
+genotype.targ = snp_fastImputeSimple(obj.bigSNP$genotypes, method = 'mean2') 
+genotype.targ.matrix = as.matrix(genotype.targ[])[,] 
+fam.order = as.data.table(obj.bigSNP$fam)
+# Get betas from sumstats
+SI_fullsig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/SI_snps.txt"), header = T, sep = "\t", fill = T)
+keep_id = map %>% select(chr, pos)
+SI_keep = SI_fullsig %>% select(chr, pos, non_effect_allele, effect_allele, beta, se, gwasP) %>% right_join(keep_id) %>% 
+  dplyr::rename(a1 = effect_allele, a0 = non_effect_allele)
+info_snp = snp_match(SI_keep, map) # 257 variants have been matched
+final_beta_SI = info_snp$beta
+genotype.targ.matrix.final = genotype.targ.matrix[,info_snp$`_NUM_ID_`]
+# Calculate PGS
+pred_prs_SI = genotype.targ.matrix.final %*% final_beta_SI
+pred_prs_SI_final = cbind(pred_prs_SI, fam.order[, c('family.ID','sample.ID')])
+names(pred_prs_SI_final) = c('prs_SI', 'FID', 'IID')
+```
+
+```{r}
+geno_file = paste0(work_data_path, 'genome/chrALL.indsig.CPD')
+snp_readBed(paste0(geno_file, '.bed'))
+obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
+# extract the SNP information from the genotype
+map = obj.bigSNP$map[-3]
+names(map) = c("chr", "rsid", "pos", "a1", "a0")
+genotype = obj.bigSNP$genotypes
+genotype.targ = snp_fastImputeSimple(obj.bigSNP$genotypes, method = 'mean2') 
+genotype.targ.matrix = as.matrix(genotype.targ[])[,] 
+fam.order = as.data.table(obj.bigSNP$fam)
+# Get betas from sumstats
+CPD_fullsig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/CPD_snps.txt"), header = T, sep = "\t", fill = T)
+keep_id = map %>% select(chr, pos)
+CPD_keep = CPD_fullsig %>% select(chr, pos, non_effect_allele, effect_allele, beta, se, gwasP) %>% right_join(keep_id) %>% 
+  dplyr::rename(a1 = effect_allele, a0 = non_effect_allele)
+info_snp = snp_match(CPD_keep, map) # 183 variants have been matched
+final_beta_CPD = info_snp$beta
+genotype.targ.matrix.final = genotype.targ.matrix[,info_snp$`_NUM_ID_`]
+# Calculate PGS
+pred_prs_CPD = genotype.targ.matrix.final %*% final_beta_CPD
+pred_prs_CPD_final = cbind(pred_prs_CPD, fam.order[, c('family.ID','sample.ID')])
+names(pred_prs_CPD_final) = c('prs_CPD', 'FID', 'IID')
+```
+
+```{r}
+geno_file = paste0(work_data_path, 'genome/chrALL.indsig.AI')
+snp_readBed(paste0(geno_file, '.bed'))
+obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
+# extract the SNP information from the genotype
+map = obj.bigSNP$map[-3]
+names(map) = c("chr", "rsid", "pos", "a1", "a0")
+genotype = obj.bigSNP$genotypes
+genotype.targ = snp_fastImputeSimple(obj.bigSNP$genotypes, method = 'mean2') 
+genotype.targ.matrix = as.matrix(genotype.targ[])[,] 
+fam.order = as.data.table(obj.bigSNP$fam)
+# Get betas from sumstats
+AI_fullsig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/AI_snps.txt"), header = T, sep = "\t", fill = T)
+keep_id = map %>% select(chr, pos)
+AI_keep = AI_fullsig %>% select(chr, pos, non_effect_allele, effect_allele, beta, se, gwasP) %>% right_join(keep_id) %>% 
+  dplyr::rename(a1 = effect_allele, a0 = non_effect_allele)
+info_snp = snp_match(AI_keep, map) # 12 variants have been matched
+final_beta_AI = info_snp$beta
+genotype.targ.matrix.final = genotype.targ.matrix[,info_snp$`_NUM_ID_`]
+# Calculate PGS
+pred_prs_AI = genotype.targ.matrix.final %*% final_beta_AI
+pred_prs_AI_final = cbind(pred_prs_AI, fam.order[, c('family.ID','sample.ID')])
+names(pred_prs_AI_final) = c('prs_AI', 'FID', 'IID')
+```
+
+```{r}
+geno_file = paste0(work_data_path, 'genome/chrALL.indsig.SC')
+snp_readBed(paste0(geno_file, '.bed'))
+obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
+# extract the SNP information from the genotype
+map = obj.bigSNP$map[-3]
+names(map) = c("chr", "rsid", "pos", "a1", "a0")
+genotype = obj.bigSNP$genotypes
+genotype.targ = snp_fastImputeSimple(obj.bigSNP$genotypes, method = 'mean2') 
+genotype.targ.matrix = as.matrix(genotype.targ[])[,] 
+fam.order = as.data.table(obj.bigSNP$fam)
+# Get betas from sumstats
+SC_fullsig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/SC_snps.txt"), header = T, sep = "\t", fill = T)
+keep_id = map %>% select(chr, pos)
+SC_keep = SC_fullsig %>% select(chr, pos, non_effect_allele, effect_allele, beta, se, gwasP) %>% right_join(keep_id) %>% 
+  dplyr::rename(a1 = effect_allele, a0 = non_effect_allele)
+info_snp = snp_match(SC_keep, map) # 29 variants have been matched
+final_beta_SC = info_snp$beta
+genotype.targ.matrix.final = genotype.targ.matrix[,info_snp$`_NUM_ID_`]
+# Calculate PGS
+pred_prs_SC = genotype.targ.matrix.final %*% final_beta_SC
+pred_prs_SC_final = cbind(pred_prs_SC, fam.order[, c('family.ID','sample.ID')])
+names(pred_prs_SC_final) = c('prs_SC', 'FID', 'IID')
+```
+
+## 3. Clean PGSs, merge with other data
+```{r}
+prs_combine = pred_prs_SI_final %>% inner_join(pred_prs_CPD_final) %>% 
+  inner_join(pred_prs_AI_final) %>% inner_join(pred_prs_SC_final)
+dim(prs_combine) # dim = (18916,6)
+# Load in genetic ancestry info
+cross = read_sas("/Users/Mingzhou/Desktop/AD_Grant/Smoking_MR/data/genome/cross.sas7bdat")
+cross_gen = cross %>% inner_join(prs_combine, by = c("local_id" = "IID")) %>% 
+  mutate(HHID = str_pad(HHID, 6, pad = "0"), PN = str_pad(PN, 3, pad = "0"))
+# Merge ancestry data
+load(file = paste0(work_data_path, "clean_df/cog_smk_combined_0116.rda"))
+combined_gen = cog_smk_combined %>% inner_join(cross_gen) %>% select(-c(local_id, FID))
+# Read HRS Raw File into R
+load('/Users/Mingzhou/Desktop/AD_Grant/HRS_raw/hrs_democoggen_wide20200910.Rda')
+selected_columns = c("HHID", "PN", "STUDY", "APOE2010_bin", "AA_PGS4_SI_GSCAN19", "EA_PGS4_SI_GSCAN19", 
+                     "AA_PGS3_EVRSMK_TAG10", "EA_PGS3_EVRSMK_TAG10") 
+hrs_short_raw = hrs0910[, selected_columns] %>% 
+  mutate(gen_ancestry = case_when(
+    !is.na(AA_PGS4_SI_GSCAN19) ~ "African",
+    !is.na(EA_PGS4_SI_GSCAN19) ~ "European"
+  )) %>% mutate(HHID = str_pad(HHID, 6, pad = "0"), PN = str_pad(PN, 3, pad = "0")) 
+# Normalize PGSs
+cross_gen_norm = cross_gen %>% left_join(hrs_short_raw)
+eur_SI_mean = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_SI) %>% mean()
+eur_SI_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_SI) %>% sd()
+afr_SI_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SI) %>% mean()
+afr_SI_sd = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SI) %>% sd()
+
+eur_CPD_mean = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_CPD) %>% mean()
+eur_CPD_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_CPD) %>% sd()
+afr_CPD_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_CPD) %>% mean()
+afr_CPD_sd = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_CPD) %>% sd()
+
+eur_AI_mean = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_AI) %>% mean()
+eur_AI_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_AI) %>% sd()
+afr_AI_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_AI) %>% mean()
+afr_AI_sd = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_AI) %>% sd()
+
+eur_SC_mean = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_SC) %>% mean()
+eur_SC_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_SC) %>% sd()
+afr_SC_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SC) %>% mean()
+afr_SC_sd = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SC) %>% sd()
+
+pgs_norm = cross_gen_norm %>% 
+  mutate(prs_SI_norm = case_when(
+    gen_ancestry == "African" ~ (prs_SI - afr_SI_mean)/afr_SI_sd,
+    gen_ancestry == "European" ~ (prs_SI - eur_SI_mean)/eur_SI_sd
+  )) %>% 
+  mutate(prs_CPD_norm = case_when(
+    gen_ancestry == "African" ~ (prs_CPD - afr_CPD_mean)/afr_CPD_sd,
+    gen_ancestry == "European" ~ (prs_CPD - eur_CPD_mean)/eur_CPD_sd
+  )) %>% 
+  mutate(prs_AI_norm = case_when(
+    gen_ancestry == "African" ~ (prs_AI - afr_AI_mean)/afr_AI_sd,
+    gen_ancestry == "European" ~ (prs_AI - eur_AI_mean)/eur_AI_sd
+  )) %>% 
+  mutate(prs_SC_norm = case_when(
+    gen_ancestry == "African" ~ (prs_SC - afr_SC_mean)/afr_SC_sd,
+    gen_ancestry == "European" ~ (prs_SC - eur_SC_mean)/eur_SC_sd
+  )) %>% 
+  mutate(hrs_SI_GSCAN19 = case_when(
+    gen_ancestry == "African" ~ AA_PGS4_SI_GSCAN19,
+    gen_ancestry == "European" ~ EA_PGS4_SI_GSCAN19
+  )) %>% 
+  mutate(hrs_SI_TAG10 = case_when(
+    gen_ancestry == "African" ~ AA_PGS3_EVRSMK_TAG10,
+    gen_ancestry == "European" ~ EA_PGS3_EVRSMK_TAG10
+  )) %>% 
+  select(HHID, PN, STUDY, gen_ancestry, APOE2010_bin, hrs_SI_GSCAN19, hrs_SI_TAG10, 
+         prs_SI_norm, prs_CPD_norm, prs_AI_norm, prs_SC_norm)
+
+# Finalize all
+final_sample_pre = combined_gen %>% inner_join(pgs_norm) %>% 
+  select(HHID, PN, STUDY, last_cog_wave, age, gender, education, proxy, gen_ancestry, cog_last_visit, 
+         hrs_SI_GSCAN19, hrs_SI_TAG10, APOE2010_bin, prs_SI_norm, prs_CPD_norm, prs_AI_norm, prs_SC_norm,
+         ever_smoke, current_smoke, cig_now, age_start_smk, yrs_since_start, age_stop_smk, yrs_since_stop, total_smk_yr, cig_most,
+         ever_drink, bmi, hypertension, diabetes, stroke) %>% 
+  dplyr::rename(sex = gender, cpd_now = cig_now)
+save(final_sample_pre, file = paste0(work_data_path, "clean_df/final_sample_pre_0124.rda"))
+```
+
+
+
+
+
+
+

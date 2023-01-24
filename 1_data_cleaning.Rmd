@@ -1,0 +1,21 @@
+---
+title: "1_data_cleaning"
+author: "Joy_Fu"
+date: "2023-01-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+source("func_used.R")
+
+load(file = paste0(work_data_path, "clean_df/final_sample_pre_0124.rda"))
+```
+

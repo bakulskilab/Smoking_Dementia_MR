@@ -1,0 +1,169 @@
+---
+title: "2_main_analysis"
+author: "Joy_Fu"
+date: "2023-01-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part 1. Two-sample MR
+```{r}
+rm(list = ls())
+pacman::p_load(tidyverse, TwoSampleMR, MRPRESSO, LDlinkR)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+output_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/output/'
+# Source in useful functions
+source("func_used.R")
+```
+
+## 1. Data preparation
+bash step - only select significant SNPs from the GSCAN GWASs
+awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' SmokingInitiation.txt > sig_SmokingInitiation.txt (N=7847 SNPs)
+awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' AgeofInitiation.txt > sig_AgeofInitiation.txt (N=450 SNPs)
+awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' SmokingCessation.txt > sig_SmokingCessation.txt (N=224 SNPs)
+awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' CigarettesPerDay.txt > sig_CigarettesPerDay.txt (N=2131 SNPs)
+
+## 2. Perform MR
+```{r}
+selected_method = c("MR Egger", "Weighted median", "Inverse variance weighted")
+```
+
+### 1) Smoking initiation
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+exposure_GSCAN_SI = read_exposure_data(paste0(work_data_path, "sumstats/sig_SmokingInitiation.txt"), sep = "\t", 
+                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+dim(exposure_GSCAN_SI) # dim = (93,13)
+# Get effects of instruments on outcome
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_SI$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+# To detect if there is any IVs not available in outcome data
+missing = exposure_GSCAN_SI %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 0 SNP missing
+# Harmonization of data
+dat_SI = harmonise_data(exposure_dat = exposure_GSCAN_SI, outcome_dat = outcome_Kunkle_AD, action = 2)
+# Perform MR
+mr_SI_result = extract_MR(mr(dat_SI), "smk_init", selected_method)
+```
+
+### 2) Cigarettes per day
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+exposure_GSCAN_CPD = read_exposure_data(paste0(work_data_path, "sumstats/sig_CigarettesPerDay.txt"), sep = "\t", 
+                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+dim(exposure_GSCAN_CPD) # dim = (23,13)
+# Get effects of instruments on outcome
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_CPD$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+# To detect if there is any IVs not available in outcome data
+missing = exposure_GSCAN_CPD %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 0 SNP missing
+# Harmonization of data
+dat_CPD = harmonise_data(exposure_dat = exposure_GSCAN_CPD, outcome_dat = outcome_Kunkle_AD, action = 2)
+# Perform MR
+mr_CPD_result = extract_MR(mr(dat_CPD), "cig_per_day", selected_method)
+```
+
+### 3) Age of initiation
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+exposure_GSCAN_AI = read_exposure_data(paste0(work_data_path, "sumstats/sig_AgeofInitiation.txt"), sep = "\t", 
+                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+dim(exposure_GSCAN_AI) # dim = (7,13)
+# Get effects of instruments on outcome
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_AI$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+# To detect if there is any IVs not available in outcome data
+missing = exposure_GSCAN_AI %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 0 SNP missing
+# Harmonization of data
+dat_AI = harmonise_data(exposure_dat = exposure_GSCAN_AI, outcome_dat = outcome_Kunkle_AD, action = 2)
+# Perform MR
+mr_AI_result = extract_MR(mr(dat_AI), "age_init", selected_method)
+```
+
+### 4) Smoking cessation
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+exposure_GSCAN_SC = read_exposure_data(paste0(work_data_path, "sumstats/sig_SmokingCessation.txt"), sep = "\t", 
+                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+dim(exposure_GSCAN_SC) # dim = (8,13)
+# Get effects of instruments on outcome
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_SC$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+# To detect if there is any IVs not avSClable in outcome data
+missing = exposure_GSCAN_SC %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 1 SNP missing
+# Find proxy SNP using LDlinkR
+x = LDproxy(missing[1, 1], pop = "EUR", r2d = "r2", token = "6e1ccff03a31") 
+eligible = x[x$R2 >= 0.8, ]
+A = exposure_GSCAN_SC %>% filter(SNP %in% eligible$RS_Number) 
+Common = outcome_Kunkle_AD %>% filter(SNP %in% A$SNP) # no common SNPs
+# Harmonization of data
+dat_SC = harmonise_data(exposure_dat = exposure_GSCAN_SC, outcome_dat = outcome_Kunkle_AD, action = 2)
+# Perform MR
+mr_SC_result = extract_MR(mr(dat_SC), "smk_cess", selected_method)
+```
+
+### Combine MR results
+```{r}
+mr_result = rbind(mr_SI_result, mr_CPD_result, mr_AI_result, mr_SC_result)
+```
+
+## 3. Assumption tests
+### 1) F-statistics and R2
+```{r}
+# Calculate a per-SNP F statistic 
+# Smoking initiation
+N = 632802 ; k = dat_SI %>% filter(mr_keep == T) %>% nrow()
+dat_SI_add = dat_SI %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+  mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
+         FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
+F_SI = ((N - 1)/k)*((sum(dat_SI_add$PVE))/(1 - sum(dat_SI_add$PVE))) 
+# Cigarettes per day
+N = 263954 ; k = dat_CPD %>% filter(mr_keep == T) %>% nrow()
+dat_CPD_add = dat_CPD %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+  mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
+         FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
+F_CPD = ((N - 1)/k)*((sum(dat_CPD_add$PVE))/(1 - sum(dat_CPD_add$PVE))) 
+# Age of initiation
+N = 262990 ; k = dat_AI %>% filter(mr_keep == T) %>% nrow()
+dat_AI_add = dat_AI %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+  mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
+         FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
+F_AI = ((N - 1)/k)*((sum(dat_AI_add$PVE))/(1 - sum(dat_AI_add$PVE))) 
+# Smoking cessation
+N = 312821 ; k = dat_SC %>% filter(mr_keep == T) %>% nrow()
+dat_SC_add = dat_SC %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+  mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
+         FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
+F_SC = ((N - 1)/k)*((sum(dat_SC_add$PVE))/(1 - sum(dat_SC_add$PVE))) 
+```
+
+```{r message=FALSE, warning=FALSE}
+mr_report(dat_SI, output_path = paste0(output_path, "TSMR_report/SmokingInitiation/"), study = "SI and AD")
+mr_report(dat_CPD, output_path = paste0(output_path, "TSMR_report/CigarettesPerDay/"), study = "CPD and AD")
+mr_report(dat_AI, output_path = paste0(output_path, "TSMR_report/AgeInitiation/"), study = "AI and AD")
+mr_report(dat_SC, output_path = paste0(output_path, "TSMR_report/SmokingCessation/"), study = "SC and AD")
+```
+
+
+```{r}
+# MR PRESSO to detect horizontal pleiotropy
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
+                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_SI, 
+                   NbDistribution = 1000, SignifThreshold = 0.05)
+capture.output(print(presso), file = paste0(output_path, "MRPRESSO/SI_presso.txt"))
+
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
+                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_CPD, 
+                   NbDistribution = 1000, SignifThreshold = 0.05)
+capture.output(print(presso), file = paste0(output_path, "MRPRESSO/CPD_presso.txt"))
+
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
+                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_AI, 
+                   NbDistribution = 1000, SignifThreshold = 0.05)
+capture.output(print(presso), file = paste0(output_path, "MRPRESSO/AI_presso.txt"))
+
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
+                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_SC, 
+                   NbDistribution = 1000, SignifThreshold = 0.05)
+capture.output(print(presso), file = paste0(output_path, "MRPRESSO/SC_presso.txt"))
+```
+
