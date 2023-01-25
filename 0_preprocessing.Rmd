@@ -12,10 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 # Part 1. Preprocessing of HRS
 ```{r}
 rm(list = ls())
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, haven)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
-source("func_used.R")
+source("functions.R")
 ```
 
 ## 1. Smoking variables -- smoke_combined
@@ -197,9 +198,18 @@ cog_rand_clean = hrs_rand_combine %>%
     last_cog_wave == "2008" ~ R9STROK,
     last_cog_wave == "2006" ~ R8STROK
   )) %>% 
+  mutate(cesd = case_when(
+    last_cog_wave == "2018" ~ R14CESD,
+    last_cog_wave == "2016" ~ R13CESD,
+    last_cog_wave == "2014" ~ R12CESD,
+    last_cog_wave == "2012" ~ R11CESD,
+    last_cog_wave == "2010" ~ R10CESD,
+    last_cog_wave == "2008" ~ R9CESD,
+    last_cog_wave == "2006" ~ R8CESD
+  )) %>% 
   select(HHID, PN, last_cog_wave, birth_year, age, gender, race, ethnicity, education, proxy, 
-         cog_last_visit, ever_smoke, current_smoke, ever_drink, bmi, hypertension, diabetes, stroke)
-dim(cog_rand_clean) # dim = c(15190,18)
+         cog_last_visit, ever_smoke, current_smoke, ever_drink, bmi, cesd, hypertension, diabetes, stroke)
+dim(cog_rand_clean) # dim = c(15190,19)
 ```
 
 ```{r}
@@ -273,18 +283,19 @@ cog_smk_combined = cog_rand_clean %>%
   )) %>% 
   select(HHID, PN, birth_year, age, last_cog_wave, gender, race, ethnicity, education, proxy, cog_last_visit, 
          ever_smoke, current_smoke, cig_now, age_start_smk, yrs_since_start, age_stop_smk, yrs_since_stop, total_smk_yr, cig_most, 
-         ever_drink, bmi, hypertension, diabetes, stroke)
-dim(cog_smk_combined) # dim = c(15190,25)
-save(cog_smk_combined, file = paste0(work_data_path, "clean_df/cog_smk_combined_0116.rda"))
+         ever_drink, bmi, cesd, hypertension, diabetes, stroke)
+dim(cog_smk_combined) # dim = c(15190,26)
+save(cog_smk_combined, file = paste0(work_data_path, "clean_df/cog_smk_combined_0124.rda"))
 ```
 
 # Part 2. Genetic variables
 ```{r}
 rm(list = ls())
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, GenomicRanges, rtracklayer, bigsnpr, bigreadr, data.table, haven)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
-source("func_used.R")
+source("functions.R")
 ```
 
 ## 1. Independent significant SNPs
@@ -344,12 +355,26 @@ write.table(name_out_SC, file = paste0(work_data_path, "sumstats/sig_snps/candid
             sep = "\t", quote = F, row.names = F, col.names = F)
 ```
 
+```{r}
+AD_sig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/AlzheimerDisease.txt"), header = T, sep = "\t", fill = T)
+AD_sig_add = AD_sig %>% separate(uniqID, c("CHR", "POS", "ALT", "REF")) %>% 
+  mutate(chr_pos_name1 = paste0(chr, ":", pos, ":", ALT, ":", REF),
+         chr_pos_name2 = paste0(chr, ":", pos, ":", REF, ":", ALT))
+name1_out = AD_sig_add %>% pull(chr_pos_name1) %>% unique()
+name2_out = AD_sig_add %>% pull(chr_pos_name2) %>% unique()
+name_out_AD = c(name1_out, name2_out) %>% unique()
+length(name_out_AD) # length = 442
+# Write output for snp extraction on server
+write.table(name_out_AD, file = paste0(work_data_path, "sumstats/sig_snps/candidate_AD_wdup.txt"),
+            sep = "\t", quote = F, row.names = F, col.names = F)
+```
+
 Run extract_snps.sh to get plink files
 
 ## 2. Constructing PGSs
 ```{r}
 geno_file = paste0(work_data_path, 'genome/chrALL.indsig.SI')
-snp_readBed(paste0(geno_file, '.bed'))
+# snp_readBed(paste0(geno_file, '.bed'))
 obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
 # extract the SNP information from the genotype
 map = obj.bigSNP$map[-3]
@@ -374,7 +399,7 @@ names(pred_prs_SI_final) = c('prs_SI', 'FID', 'IID')
 
 ```{r}
 geno_file = paste0(work_data_path, 'genome/chrALL.indsig.CPD')
-snp_readBed(paste0(geno_file, '.bed'))
+# snp_readBed(paste0(geno_file, '.bed'))
 obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
 # extract the SNP information from the genotype
 map = obj.bigSNP$map[-3]
@@ -399,7 +424,7 @@ names(pred_prs_CPD_final) = c('prs_CPD', 'FID', 'IID')
 
 ```{r}
 geno_file = paste0(work_data_path, 'genome/chrALL.indsig.AI')
-snp_readBed(paste0(geno_file, '.bed'))
+# snp_readBed(paste0(geno_file, '.bed'))
 obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
 # extract the SNP information from the genotype
 map = obj.bigSNP$map[-3]
@@ -424,7 +449,7 @@ names(pred_prs_AI_final) = c('prs_AI', 'FID', 'IID')
 
 ```{r}
 geno_file = paste0(work_data_path, 'genome/chrALL.indsig.SC')
-snp_readBed(paste0(geno_file, '.bed'))
+# snp_readBed(paste0(geno_file, '.bed'))
 obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
 # extract the SNP information from the genotype
 map = obj.bigSNP$map[-3]
@@ -447,17 +472,42 @@ pred_prs_SC_final = cbind(pred_prs_SC, fam.order[, c('family.ID','sample.ID')])
 names(pred_prs_SC_final) = c('prs_SC', 'FID', 'IID')
 ```
 
+```{r}
+geno_file = paste0(work_data_path, 'genome/chrALL.indsig.AD')
+# snp_readBed(paste0(geno_file, '.bed'))
+obj.bigSNP = snp_attach(paste0(geno_file, '.rds'))
+# extract the SNP information from the genotype
+map = obj.bigSNP$map[-3]
+names(map) = c("chr", "rsid", "pos", "a1", "a0")
+genotype = obj.bigSNP$genotypes
+genotype.targ = snp_fastImputeSimple(obj.bigSNP$genotypes, method = 'mean2') 
+genotype.targ.matrix = as.matrix(genotype.targ[])[,] 
+fam.order = as.data.table(obj.bigSNP$fam)
+# Get betas from sumstats
+AD_fullsig = read.table(file = paste0(work_data_path, "sumstats/sig_snps/AD_snps.txt"), header = T, sep = "\t", fill = T)
+keep_id = map %>% dplyr::select(chr, pos)
+AD_keep = AD_fullsig %>% dplyr::select(chr, pos, non_effect_allele, effect_allele, beta, se, gwasP) %>% right_join(keep_id) %>% 
+  dplyr::rename(a1 = effect_allele, a0 = non_effect_allele)
+info_snp = snp_match(AD_keep, map) # 154 variants have been matched
+final_beta_AD = info_snp$beta
+genotype.targ.matrix.final = genotype.targ.matrix[,info_snp$`_NUM_ID_`]
+# Calculate PGS
+pred_prs_AD = genotype.targ.matrix.final %*% final_beta_AD
+pred_prs_AD_final = cbind(pred_prs_AD, fam.order[, c('family.ID','sample.ID')])
+names(pred_prs_AD_final) = c('prs_AD', 'FID', 'IID')
+```
+
 ## 3. Clean PGSs, merge with other data
 ```{r}
 prs_combine = pred_prs_SI_final %>% inner_join(pred_prs_CPD_final) %>% 
-  inner_join(pred_prs_AI_final) %>% inner_join(pred_prs_SC_final)
-dim(prs_combine) # dim = (18916,6)
+  inner_join(pred_prs_AI_final) %>% inner_join(pred_prs_SC_final) %>% inner_join(pred_prs_AD_final)
+dim(prs_combine) # dim = (18916,7)
 # Load in genetic ancestry info
 cross = read_sas("/Users/Mingzhou/Desktop/AD_Grant/Smoking_MR/data/genome/cross.sas7bdat")
 cross_gen = cross %>% inner_join(prs_combine, by = c("local_id" = "IID")) %>% 
   mutate(HHID = str_pad(HHID, 6, pad = "0"), PN = str_pad(PN, 3, pad = "0"))
 # Merge ancestry data
-load(file = paste0(work_data_path, "clean_df/cog_smk_combined_0116.rda"))
+load(file = paste0(work_data_path, "clean_df/cog_smk_combined_0124.rda"))
 combined_gen = cog_smk_combined %>% inner_join(cross_gen) %>% select(-c(local_id, FID))
 # Read HRS Raw File into R
 load('/Users/Mingzhou/Desktop/AD_Grant/HRS_raw/hrs_democoggen_wide20200910.Rda')
@@ -468,8 +518,18 @@ hrs_short_raw = hrs0910[, selected_columns] %>%
     !is.na(AA_PGS4_SI_GSCAN19) ~ "African",
     !is.na(EA_PGS4_SI_GSCAN19) ~ "European"
   )) %>% mutate(HHID = str_pad(HHID, 6, pad = "0"), PN = str_pad(PN, 3, pad = "0")) 
+# Load HRS calculated AD PGSs (Kunkle p_0.01)
+load("/Users/Mingzhou/Desktop/AD_Grant/HRS_raw/european_kunkle_pgss.rda")
+load("/Users/Mingzhou/Desktop/AD_Grant/HRS_raw/african_kunkle_pgss.rda")
+# Since we have a relatively small sample size, we want to combine the CIND and dementia category together to increase the power
+hrs_short_prs = hrs_short_raw %>% 
+  left_join(kunkle_europ, by = c("HHID" = "HHID", "PN" = "PN")) %>% 
+  left_join(kunkle_afric, by = c("HHID" = "HHID", "PN" = "PN")) %>% 
+  select(HHID, PN, STUDY, APOE2010_bin, AA_PGS4_SI_GSCAN19, EA_PGS4_SI_GSCAN19, AA_PGS3_EVRSMK_TAG10, EA_PGS3_EVRSMK_TAG10, 
+         gen_ancestry, EAPH13_KunkleYAPOE_PT_0_01, AAPH13_KunkleYAPOE_PT_0_01)
+
 # Normalize PGSs
-cross_gen_norm = cross_gen %>% left_join(hrs_short_raw)
+cross_gen_norm = cross_gen %>% left_join(hrs_short_prs)
 eur_SI_mean = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_SI) %>% mean()
 eur_SI_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_SI) %>% sd()
 afr_SI_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SI) %>% mean()
@@ -490,6 +550,11 @@ eur_SC_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_S
 afr_SC_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SC) %>% mean()
 afr_SC_sd = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_SC) %>% sd()
 
+eur_AD_mean = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_AD) %>% mean()
+eur_AD_sd = cross_gen_norm %>% filter(gen_ancestry == "European") %>% pull(prs_AD) %>% sd()
+afr_AD_mean = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_AD) %>% mean()
+afr_AD_sd = cross_gen_norm %>% filter(gen_ancestry == "African") %>% pull(prs_AD) %>% sd()
+
 pgs_norm = cross_gen_norm %>% 
   mutate(prs_SI_norm = case_when(
     gen_ancestry == "African" ~ (prs_SI - afr_SI_mean)/afr_SI_sd,
@@ -507,6 +572,10 @@ pgs_norm = cross_gen_norm %>%
     gen_ancestry == "African" ~ (prs_SC - afr_SC_mean)/afr_SC_sd,
     gen_ancestry == "European" ~ (prs_SC - eur_SC_mean)/eur_SC_sd
   )) %>% 
+  mutate(prs_AD_norm = case_when(
+    gen_ancestry == "African" ~ (prs_AD - afr_AD_mean)/afr_AD_sd,
+    gen_ancestry == "European" ~ (prs_AD - eur_AD_mean)/eur_AD_sd
+  )) %>% 
   mutate(hrs_SI_GSCAN19 = case_when(
     gen_ancestry == "African" ~ AA_PGS4_SI_GSCAN19,
     gen_ancestry == "European" ~ EA_PGS4_SI_GSCAN19
@@ -515,16 +584,25 @@ pgs_norm = cross_gen_norm %>%
     gen_ancestry == "African" ~ AA_PGS3_EVRSMK_TAG10,
     gen_ancestry == "European" ~ EA_PGS3_EVRSMK_TAG10
   )) %>% 
-  select(HHID, PN, STUDY, gen_ancestry, APOE2010_bin, hrs_SI_GSCAN19, hrs_SI_TAG10, 
-         prs_SI_norm, prs_CPD_norm, prs_AI_norm, prs_SC_norm)
+  mutate(hrs_AD_Kunkle19 = case_when(
+    gen_ancestry == "African" ~ AAPH13_KunkleYAPOE_PT_0_01,
+    gen_ancestry == "European" ~ EAPH13_KunkleYAPOE_PT_0_01
+  )) %>% 
+  select(HHID, PN, STUDY, gen_ancestry, APOE2010_bin, hrs_SI_GSCAN19, hrs_SI_TAG10, hrs_AD_Kunkle19,
+         prs_SI_norm, prs_CPD_norm, prs_AI_norm, prs_SC_norm, prs_AD_norm)
 
 # Finalize all
 final_sample_pre = combined_gen %>% inner_join(pgs_norm) %>% 
   select(HHID, PN, STUDY, last_cog_wave, age, gender, education, proxy, gen_ancestry, cog_last_visit, 
-         hrs_SI_GSCAN19, hrs_SI_TAG10, APOE2010_bin, prs_SI_norm, prs_CPD_norm, prs_AI_norm, prs_SC_norm,
+         hrs_SI_GSCAN19, hrs_SI_TAG10, hrs_AD_Kunkle19, APOE2010_bin, prs_SI_norm, prs_CPD_norm, prs_AI_norm, prs_SC_norm, prs_AD_norm,
          ever_smoke, current_smoke, cig_now, age_start_smk, yrs_since_start, age_stop_smk, yrs_since_stop, total_smk_yr, cig_most,
-         ever_drink, bmi, hypertension, diabetes, stroke) %>% 
+         ever_drink, bmi, cesd, hypertension, diabetes, stroke) %>% 
   dplyr::rename(sex = gender, cpd_now = cig_now)
+# Also add PCs
+hrs_pcs = hrs0910 %>% select(HHID, PN, PC1_5A, PC1_5B, PC1_5C, PC1_5D, PC1_5E)
+final_sample_pre = final_sample_pre %>% 
+  left_join(hrs_pcs)
+dim(final_sample_pre) # dim = (15190,39)
 save(final_sample_pre, file = paste0(work_data_path, "clean_df/final_sample_pre_0124.rda"))
 ```
 

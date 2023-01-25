@@ -10,14 +10,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Part 1. Two-sample MR
-```{r}
+```{r message=FALSE, warning=FALSE}
 rm(list = ls())
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, TwoSampleMR, MRPRESSO, LDlinkR)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
 output_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/output/'
 # Source in useful functions
-source("func_used.R")
+source("functions.R")
 ```
 
 ## 1. Data preparation
@@ -166,4 +167,156 @@ presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure",
                    NbDistribution = 1000, SignifThreshold = 0.05)
 capture.output(print(presso), file = paste0(output_path, "MRPRESSO/SC_presso.txt"))
 ```
+
+# Part 2. Association check
+```{r message=FALSE, warning=FALSE}
+rm(list = ls())
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+pacman::p_load(tidyverse, epiflow, writexl)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+output_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/output/'
+# Source in useful functions
+source("functions.R")
+load(file = paste0(work_data_path, "modeling/final_europ_0124.rda"))
+```
+
+## 1. Smoking behaviors and cognition
+```{r}
+# Set up models
+demo_basic = 'age + sex + education + last_cog_wave + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E'
+health_behavior = paste0(demo_basic, ' + ever_drink + bmi + cesd + hypertension + diabetes + stroke')
+gene_add = paste0(health_behavior, ' + APOE2010_bin')
+```
+
+### 1) Ordinal logistic regression check
+```{r}
+library(MASS)
+# fit ordered logit model and store results 'm'
+olm = polr(as.formula(paste('as.factor(cog_last_visit) ~ ever_smoke + ', demo_basic)), data = final_europ, Hess = TRUE)
+summary(olm)
+detach("package:MASS")
+```
+
+### 2) Back to multivariate regression
+```{r}
+cind_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
+  mutate(cind_bin = if_else(cog_last_visit == 0, 0, 1)) 
+# dim = (7446,39)
+dementia_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
+  mutate(dem_bin = if_else(cog_last_visit == 0, 0, 1))
+# dim = (6637,39)
+```
+
+```{r message=FALSE, warning=FALSE}
+smk_var_lst = c("ever_smoke", "current_smoke", "yrs_since_start", "age_stop_smk", "total_smk_yr")
+lst_model = c('demo', 'health', 'apoe')
+
+# CIND
+for (i in 1:length(smk_var_lst)) {
+  smk_var = smk_var_lst[i]
+  f1 = as.formula(paste('cind_bin ~ ', smk_var, ' + ', demo_basic))
+  demo = glm(f1, data = cind_normal, family = 'binomial')
+  f2 = as.formula(paste('cind_bin ~ ', smk_var, ' + ', health_behavior))
+  health = glm(f2, data = cind_normal, family = 'binomial')
+  f3 = as.formula(paste('cind_bin ~ ', smk_var, ' + ', gene_add))
+  apoe = glm(f3, data = cind_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('cind_', smk_var, '_'))
+  if (i == 1) {cind_tbl = or_result} else {cind_tbl = rbind(cind_tbl, or_result)}
+}
+# Dementia
+for (i in 1:length(smk_var_lst)) {
+  smk_var = smk_var_lst[i]
+  f1 = as.formula(paste('dem_bin ~ ', smk_var, ' + ', demo_basic))
+  demo = glm(f1, data = dementia_normal, family = 'binomial')
+  f2 = as.formula(paste('dem_bin ~ ', smk_var, ' + ', health_behavior))
+  health = glm(f2, data = dementia_normal, family = 'binomial')
+  f3 = as.formula(paste('dem_bin ~ ', smk_var, ' + ', gene_add))
+  apoe = glm(f3, data = dementia_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('dem_', smk_var, '_'))
+  if (i == 1) {dem_tbl = or_result} else {dem_tbl = rbind(dem_tbl, or_result)}
+}
+smk_cog_summary = rbind(cind_tbl, dem_tbl)
+```
+
+So here we decide to do smoking PGSs -> smoking -> CIND and AD PGS -> dementia -> smoking cessation
+
+## 2. Smoking PGSs and smoking behaviors
+```{r message=FALSE, warning=FALSE}
+gene_adj_basic = 'age + sex + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E'
+smk_var_bin = c("ever_smoke", "current_smoke")
+smk_var_cont = c("age_start_smk", "yrs_since_start", "age_stop_smk", "total_smk_yr")
+prs_lst = c("PRS_SI", "PRS_CPD", "PRS_AI", "PRS_SC")
+# Binary
+for (i in 1:length(smk_var_bin)) {
+  smk_var = smk_var_bin[i]
+  for (j in 1:length(prs_lst)) {
+    prs_var = prs_lst[j]
+    f1 = as.formula(paste(smk_var, ' ~ ', prs_var, ' + ', gene_adj_basic))
+    prs_demo = glm(f1, data = final_europ, family = 'binomial')
+    or_result = make_OR_table("prs_demo", 2, paste0(prs_var, '_', smk_var, '_'))
+    if (i == 1 & j == 1) {prs_tbl_bin = or_result} else {prs_tbl_bin = rbind(prs_tbl_bin, or_result)}
+  }
+}
+# Continuous
+for (i in 1:length(smk_var_cont)) {
+  smk_var = smk_var_cont[i]
+  for (j in 1:length(prs_lst)) {
+    prs_var = prs_lst[j]
+    f1 = as.formula(paste(smk_var, ' ~ ', prs_var, ' + ', gene_adj_basic))
+    prs_demo = lm(f1, data = final_europ)
+    or_result = make_coeff_table_lm("prs_demo", 2, paste0(prs_var, '_', smk_var, '_'))
+    if (i == 1 & j == 1) {prs_tbl_cont = or_result} else {prs_tbl_cont = rbind(prs_tbl_cont, or_result)}
+  }
+}
+prs_tbl_cont$OR = NA
+prs_tbl_cont$`95% CI_OR` = NA
+pgs_smk_summary = rbind(prs_tbl_bin, prs_tbl_cont)
+```
+
+## 3. Smoking PGSs and cognition
+```{r message=FALSE, warning=FALSE}
+prs_lst = c("PRS_SI", "PRS_CPD", "PRS_AI", "PRS_SC")
+lst_model = c('demo', 'health', 'apoe')
+
+# CIND
+for (i in 1:length(prs_lst)) {
+  prs_var = prs_lst[i]
+  f1 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', demo_basic))
+  demo = glm(f1, data = cind_normal, family = 'binomial')
+  f2 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', health_behavior))
+  health = glm(f2, data = cind_normal, family = 'binomial')
+  f3 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', gene_add))
+  apoe = glm(f3, data = cind_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('dem_', prs_var, '_'))
+  if (i == 1) {cind_prs_tbl = or_result} else {cind_prs_tbl = rbind(cind_prs_tbl, or_result)}
+}
+# Dementia
+for (i in 1:length(prs_lst)) {
+  prs_var = prs_lst[i]
+  f1 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', demo_basic))
+  demo = glm(f1, data = dementia_normal, family = 'binomial')
+  f2 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', health_behavior))
+  health = glm(f2, data = dementia_normal, family = 'binomial')
+  f3 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', gene_add))
+  apoe = glm(f3, data = dementia_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('dem_', prs_var, '_'))
+  if (i == 1) {dem_prs_tbl = or_result} else {dem_prs_tbl = rbind(dem_prs_tbl, or_result)}
+}
+prs_cog_summary = rbind(cind_prs_tbl, dem_prs_tbl)
+```
+
+## Output results
+```{r}
+sheets_OR = list('smk_cog' = smk_cog_summary, 'pgs_smk' = pgs_smk_summary,
+                 'pgs_cog' = prs_cog_summary)
+write_xlsx(sheets_OR, path = paste0(output_path, 'association_0124.xlsx'))
+```
+
+# Part 3. One-sample MR
+
+
+
+
+
 
