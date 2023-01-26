@@ -1,0 +1,113 @@
+---
+title: "3_sensitivity_analysis"
+author: "Joy_Fu"
+date: "2023-01-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part 1. Reverse causation two-sample MR
+```{r message=FALSE, warning=FALSE}
+rm(list = ls())
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+pacman::p_load(tidyverse, TwoSampleMR, MRPRESSO, LDlinkR)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+output_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/output/'
+# Source in useful functions
+source("functions.R")
+```
+
+## 1. Data preparation
+bash step - only select significant SNPs from the AD GWAS
+awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' AD_Kunkle2019_EUR_hg19.txt > sig_AD_Kunkle2019_EUR_hg19.txt (N=1515 SNPs)
+
+## 2. Perform MR
+```{r}
+selected_method = c("MR Egger", "Weighted median", "Inverse variance weighted", "Weighted mode")
+exposure_AD = read_exposure_data(paste0(work_data_path, "sumstats/sig_AD_Kunkle2019_EUR_hg19.txt"), sep = "\t", 
+                                 snp_col = "rsid", beta_col = "beta", se_col = "se", pval_col = "p", 
+                                 effect_allele_col = "a1", other_allele_col = "a0", clump = TRUE)
+dim(exposure_AD) # dim = (20,14)
+```
+
+### 1) Smoking initiation
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# Get effects of instruments on outcome
+outcome_SI = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/SmokingInitiation.txt"), sep = "\t",
+                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+
+# To detect if there is any IVs not available in outcome data
+missing = exposure_AD %>% filter(!SNP %in% outcome_SI$SNP) # 1 SNP missing
+# Find proxy SNP using LDlinkR
+x = LDproxy(missing[1, 3], pop = "EUR", r2d = "r2", token = "6e1ccff03a31") 
+eligible = x[x$R2 >= 0.8, ]
+A = exposure_AD %>% filter(SNP %in% eligible$RS_Number) 
+Common = outcome_SI %>% filter(SNP %in% A$SNP) # no common SNPs
+# Harmonization of data
+dat_AD_SI = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_SI, action = 2)
+# Perform MR
+mr_SI_result = extract_MR(mr(dat_AD_SI), "smk_init", selected_method)
+```
+
+### 2) Cigarettes per day
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# Get effects of instruments on outcome
+outcome_CPD = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/CigarettesPerDay.txt"), sep = "\t",
+                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+
+# To detect if there is any IVs not available in outcome data
+missing = exposure_AD %>% filter(!SNP %in% outcome_CPD$SNP) # 1 SNP missing
+# Find proxy SNP using LDlinkR
+Common = outcome_CPD %>% filter(SNP %in% A$SNP) # no common SNPs
+# Harmonization of data
+dat_AD_CPD = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_CPD, action = 2)
+# Perform MR
+mr_CPD_result = extract_MR(mr(dat_AD_CPD), "cig_per_day", selected_method)
+```
+
+### 3) Age of initiation
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# Get effects of instruments on outcome
+outcome_AI = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/AgeofInitiation.txt"), sep = "\t",
+                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+
+# To detect if there is any IVs not available in outcome data
+missing = exposure_AD %>% filter(!SNP %in% outcome_AI$SNP) # 1 SNP missing
+# Find proxy SNP using LDlinkR
+Common = outcome_AI %>% filter(SNP %in% A$SNP) # no common SNPs
+# Harmonization of data
+dat_AD_AI = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_AI, action = 2)
+# Perform MR
+mr_AI_result = extract_MR(mr(dat_AD_AI), "age_init", selected_method)
+```
+
+### 4) Smoking cessation
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# Get effects of instruments on outcome
+outcome_SC = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/SmokingCessation.txt"), sep = "\t",
+                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+
+# To detect if there is any IVs not available in outcome data
+missing = exposure_AD %>% filter(!SNP %in% outcome_SC$SNP) # 1 SNP missing
+# Find proxy SNP using LDlinkR
+Common = outcome_SC %>% filter(SNP %in% A$SNP) # no common SNPs
+# Harmonization of data
+dat_AD_SC = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_SC, action = 2)
+# Perform MR
+mr_SC_result = extract_MR(mr(dat_AD_SC), "smk_cess", selected_method)
+```
+
+### Combine MR results
+```{r}
+AD_mr_result = rbind(mr_SI_result, mr_CPD_result, mr_AI_result, mr_SC_result)
+```
+
+
