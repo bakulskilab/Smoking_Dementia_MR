@@ -30,7 +30,7 @@ awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' CigarettesPerDay.txt > sig_Cigaret
 
 ## 2. Perform MR
 ```{r}
-selected_method = c("MR Egger", "Weighted median", "Inverse variance weighted")
+selected_method = c("MR Egger", "Weighted median", "Inverse variance weighted", "Weighted mode")
 ```
 
 ### 1) Smoking initiation
