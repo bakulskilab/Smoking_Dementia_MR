@@ -314,9 +314,111 @@ write_xlsx(sheets_OR, path = paste0(output_path, 'association_0124.xlsx'))
 ```
 
 # Part 3. One-sample MR
+```{r message=FALSE, warning=FALSE}
+rm(list = ls())
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+pacman::p_load(tidyverse, epiflow, writexl, AER, modelsummary)
+# Basic setups
+work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
+output_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/output/'
+# Source in useful functions
+source("functions.R")
+load(file = paste0(work_data_path, "modeling/final_europ_0124.rda"))
+```
+
+```{r}
+# Separate by cognitive status
+cind_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
+  mutate(cind_bin = if_else(cog_last_visit == 0, 0, 1)) 
+# dim = (7446,39)
+dementia_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
+  mutate(dem_bin = if_else(cog_last_visit == 0, 0, 1))
+# dim = (6637,39)
+gene_adj_basic = 'age + sex + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E + APOE2010_bin'
+demo_basic = 'age + sex + education + last_cog_wave + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E'
+health_behavior = paste0(demo_basic, ' + ever_drink + bmi + cesd + hypertension + diabetes + stroke')
+gene_add = paste0(health_behavior, ' + APOE2010_bin')
+```
+
+## 1. CIND vs. Normal
+```{r}
+# Ever smoking
+f0 = as.formula(paste0('cind_bin ~ ever_smoke', ' + ', gene_add))
+f1 = as.formula(paste0('cind_bin ~ ever_smoke', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+# perform iv regression
+glm_ever = glm(f0, data = cind_normal, family = "binomial")
+iv_mod_ever = ivreg(f1, data = cind_normal)
+m_list = list(GLM = glm_ever, IV = iv_mod_ever)
+msummary(m_list)
+summary(iv_mod_ever, diagnostics = TRUE)
+
+# Current smoking
+f0 = as.formula(paste0('cind_bin ~ current_smoke', ' + ', gene_add))
+f2 = as.formula(paste0('cind_bin ~ current_smoke', ' + ', gene_adj_basic, ' | PRS_SC + ', gene_add))
+glm_current = glm(f0, data = cind_normal, family = "binomial")
+iv_mod_current = ivreg(f2, data = cind_normal)
+m_list = list(GLM = glm_current, IV = iv_mod_current)
+msummary(m_list)
+summary(iv_mod_current, diagnostics = TRUE)
+
+# Age stop smoking
+f0 = as.formula(paste0('cind_bin ~ age_stop_smk', ' + ', gene_add))
+f3 = as.formula(paste0('cind_bin ~ age_stop_smk', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+glm_agestop = glm(f0, data = cind_normal, family = "binomial")
+iv_mod_agestop = ivreg(f3, data = cind_normal)
+m_list = list(GLM = glm_agestop, IV = iv_mod_agestop)
+msummary(m_list)
+summary(iv_mod_agestop, diagnostics = TRUE)
+
+# Total smoking years
+f0 = as.formula(paste0('cind_bin ~ total_smk_yr', ' + ', gene_add))
+f4 = as.formula(paste0('cind_bin ~ total_smk_yr', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+glm_smkyr = glm(f0, data = cind_normal, family = "binomial")
+iv_mod_smkyr = ivreg(f4, data = cind_normal)
+m_list = list(GLM = glm_smkyr, IV = iv_mod_smkyr)
+msummary(m_list)
+summary(iv_mod_smkyr, diagnostics = TRUE)
+```
 
 
 
+```{r}
+# Ever smoking
+f0 = as.formula(paste0('dem_bin ~ ever_smoke', ' + ', gene_add))
+f1 = as.formula(paste0('dem_bin ~ ever_smoke', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+# perform iv regression
+glm_ever = glm(f0, data = dementia_normal, family = "binomial")
+iv_mod_ever = ivreg(f1, data = dementia_normal)
+m_list = list(GLM = glm_ever, IV = iv_mod_ever)
+msummary(m_list)
+summary(iv_mod_ever, diagnostics = TRUE)
 
+# Current smoking
+f0 = as.formula(paste0('dem_bin ~ current_smoke', ' + ', gene_add))
+f2 = as.formula(paste0('dem_bin ~ current_smoke', ' + ', gene_adj_basic, ' | PRS_SC + ', gene_add))
+glm_current = glm(f0, data = dementia_normal, family = "binomial")
+iv_mod_current = ivreg(f2, data = dementia_normal)
+m_list = list(GLM = glm_current, IV = iv_mod_current)
+msummary(m_list)
+summary(iv_mod_current, diagnostics = TRUE)
+
+# Age stop smoking
+f0 = as.formula(paste0('dem_bin ~ age_stop_smk', ' + ', gene_add))
+f3 = as.formula(paste0('dem_bin ~ age_stop_smk', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+glm_agestop = glm(f0, data = dementia_normal, family = "binomial")
+iv_mod_agestop = ivreg(f3, data = dementia_normal)
+m_list = list(GLM = glm_agestop, IV = iv_mod_agestop)
+msummary(m_list)
+summary(iv_mod_agestop, diagnostics = TRUE)
+
+# Total smoking years
+f0 = as.formula(paste0('dem_bin ~ total_smk_yr', ' + ', gene_add))
+f4 = as.formula(paste0('dem_bin ~ total_smk_yr', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+glm_smkyr = glm(f0, data = dementia_normal, family = "binomial")
+iv_mod_smkyr = ivreg(f4, data = dementia_normal)
+m_list = list(GLM = glm_smkyr, IV = iv_mod_smkyr)
+msummary(m_list)
+summary(iv_mod_smkyr, diagnostics = TRUE)
+```
 
 
