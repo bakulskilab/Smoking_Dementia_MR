@@ -12,7 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # Part 1. Two-sample MR
 ```{r message=FALSE, warning=FALSE}
 rm(list = ls())
-lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, 
+       character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, TwoSampleMR, MRPRESSO, LDlinkR)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
@@ -30,65 +31,89 @@ awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' CigarettesPerDay.txt > sig_Cigaret
 
 ## 2. Perform MR
 ```{r}
-selected_method = c("MR Egger", "Weighted median", "Inverse variance weighted", "Weighted mode")
+selected_method = c("MR Egger", "Weighted median", 
+                    "Inverse variance weighted", "Weighted mode")
 ```
 
 ### 1) Smoking initiation
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
-exposure_GSCAN_SI = read_exposure_data(paste0(work_data_path, "sumstats/sig_SmokingInitiation.txt"), sep = "\t", 
-                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+exposure_GSCAN_SI = read_exposure_data(paste0(work_data_path, 
+                                              "sumstats/sig_SmokingInitiation.txt"), 
+                                       sep = "\t", samplesize_col = "N", 
+                                       snp_col = "RSID", beta_col = "BETA", 
+                                       se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", 
+                                       other_allele_col = "ALT", clump = TRUE)
 dim(exposure_GSCAN_SI) # dim = (93,13)
 # Get effects of instruments on outcome
-outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_SI$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_SI$SNP, 
+                                         outcomes = "ieu-b-2") # Kunkle,2019
 # To detect if there is any IVs not available in outcome data
 missing = exposure_GSCAN_SI %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 0 SNP missing
 # Harmonization of data
-dat_SI = harmonise_data(exposure_dat = exposure_GSCAN_SI, outcome_dat = outcome_Kunkle_AD, action = 2)
+dat_SI = harmonise_data(exposure_dat = exposure_GSCAN_SI, 
+                        outcome_dat = outcome_Kunkle_AD, action = 2)
 # Perform MR
 mr_SI_result = extract_MR(mr(dat_SI), "smk_init", selected_method)
 ```
 
 ### 2) Cigarettes per day
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
-exposure_GSCAN_CPD = read_exposure_data(paste0(work_data_path, "sumstats/sig_CigarettesPerDay.txt"), sep = "\t", 
-                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+exposure_GSCAN_CPD = read_exposure_data(paste0(work_data_path, 
+                                               "sumstats/sig_CigarettesPerDay.txt"), 
+                                        sep = "\t", samplesize_col = "N", 
+                                        snp_col = "RSID", beta_col = "BETA", 
+                                        se_col = "SE", pval_col = "P", 
+                                        eaf_col = "AF", effect_allele_col = "REF", 
+                                        other_allele_col = "ALT", clump = TRUE)
 dim(exposure_GSCAN_CPD) # dim = (23,13)
 # Get effects of instruments on outcome
-outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_CPD$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_CPD$SNP, 
+                                         outcomes = "ieu-b-2") # Kunkle,2019
 # To detect if there is any IVs not available in outcome data
 missing = exposure_GSCAN_CPD %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 0 SNP missing
 # Harmonization of data
-dat_CPD = harmonise_data(exposure_dat = exposure_GSCAN_CPD, outcome_dat = outcome_Kunkle_AD, action = 2)
+dat_CPD = harmonise_data(exposure_dat = exposure_GSCAN_CPD, 
+                         outcome_dat = outcome_Kunkle_AD, action = 2)
 # Perform MR
 mr_CPD_result = extract_MR(mr(dat_CPD), "cig_per_day", selected_method)
 ```
 
 ### 3) Age of initiation
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
-exposure_GSCAN_AI = read_exposure_data(paste0(work_data_path, "sumstats/sig_AgeofInitiation.txt"), sep = "\t", 
-                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+exposure_GSCAN_AI = read_exposure_data(paste0(work_data_path, 
+                                              "sumstats/sig_AgeofInitiation.txt"), 
+                                       sep = "\t", samplesize_col = "N", 
+                                       snp_col = "RSID", beta_col = "BETA", 
+                                       se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", 
+                                       other_allele_col = "ALT", clump = TRUE)
 dim(exposure_GSCAN_AI) # dim = (7,13)
 # Get effects of instruments on outcome
-outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_AI$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_AI$SNP, 
+                                         outcomes = "ieu-b-2") # Kunkle,2019
 # To detect if there is any IVs not available in outcome data
 missing = exposure_GSCAN_AI %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 0 SNP missing
 # Harmonization of data
-dat_AI = harmonise_data(exposure_dat = exposure_GSCAN_AI, outcome_dat = outcome_Kunkle_AD, action = 2)
+dat_AI = harmonise_data(exposure_dat = exposure_GSCAN_AI, 
+                        outcome_dat = outcome_Kunkle_AD, action = 2)
 # Perform MR
 mr_AI_result = extract_MR(mr(dat_AI), "age_init", selected_method)
 ```
 
 ### 4) Smoking cessation
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
-exposure_GSCAN_SC = read_exposure_data(paste0(work_data_path, "sumstats/sig_SmokingCessation.txt"), sep = "\t", 
-                                       samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                                       eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT", clump = TRUE)
+exposure_GSCAN_SC = read_exposure_data(paste0(work_data_path, 
+                                              "sumstats/sig_SmokingCessation.txt"), 
+                                       sep = "\t", samplesize_col = "N", 
+                                       snp_col = "RSID", beta_col = "BETA", 
+                                       se_col = "SE", pval_col = "P", 
+                                       eaf_col = "AF", effect_allele_col = "REF", 
+                                       other_allele_col = "ALT", clump = TRUE)
 dim(exposure_GSCAN_SC) # dim = (8,13)
 # Get effects of instruments on outcome
-outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_SC$SNP, outcomes = "ieu-b-2") # Kunkle,2019
+outcome_Kunkle_AD = extract_outcome_data(snps = exposure_GSCAN_SC$SNP, 
+                                         outcomes = "ieu-b-2") # Kunkle,2019
 # To detect if there is any IVs not avSClable in outcome data
 missing = exposure_GSCAN_SC %>% filter(!SNP %in% outcome_Kunkle_AD$SNP) # 1 SNP missing
 # Find proxy SNP using LDlinkR
@@ -97,7 +122,8 @@ eligible = x[x$R2 >= 0.8, ]
 A = exposure_GSCAN_SC %>% filter(SNP %in% eligible$RS_Number) 
 Common = outcome_Kunkle_AD %>% filter(SNP %in% A$SNP) # no common SNPs
 # Harmonization of data
-dat_SC = harmonise_data(exposure_dat = exposure_GSCAN_SC, outcome_dat = outcome_Kunkle_AD, action = 2)
+dat_SC = harmonise_data(exposure_dat = exposure_GSCAN_SC, 
+                        outcome_dat = outcome_Kunkle_AD, action = 2)
 # Perform MR
 mr_SC_result = extract_MR(mr(dat_SC), "smk_cess", selected_method)
 ```
@@ -113,57 +139,73 @@ mr_result = rbind(mr_SI_result, mr_CPD_result, mr_AI_result, mr_SC_result)
 # Calculate a per-SNP F statistic 
 # Smoking initiation
 N = 632802 ; k = dat_SI %>% filter(mr_keep == T) %>% nrow()
-dat_SI_add = dat_SI %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+dat_SI_add = dat_SI %>% 
+  mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
   mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
          FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
 F_SI = ((N - 1)/k)*((sum(dat_SI_add$PVE))/(1 - sum(dat_SI_add$PVE))) 
 # Cigarettes per day
 N = 263954 ; k = dat_CPD %>% filter(mr_keep == T) %>% nrow()
-dat_CPD_add = dat_CPD %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+dat_CPD_add = dat_CPD %>% 
+  mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
   mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
          FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
 F_CPD = ((N - 1)/k)*((sum(dat_CPD_add$PVE))/(1 - sum(dat_CPD_add$PVE))) 
 # Age of initiation
 N = 262990 ; k = dat_AI %>% filter(mr_keep == T) %>% nrow()
-dat_AI_add = dat_AI %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+dat_AI_add = dat_AI %>% 
+  mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
   mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
          FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
 F_AI = ((N - 1)/k)*((sum(dat_AI_add$PVE))/(1 - sum(dat_AI_add$PVE))) 
 # Smoking cessation
 N = 312821 ; k = dat_SC %>% filter(mr_keep == T) %>% nrow()
-dat_SC_add = dat_SC %>% mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
+dat_SC_add = dat_SC %>% 
+  mutate(EAF2 = 1 - eaf.exposure, MAF = pmin(eaf.exposure, EAF2)) %>% 
   mutate(PVE = PVEfx(beta.exposure, MAF, se.exposure, N),
          FSTAT = ((N - 1 - 1)/1)*(PVE/(1 - PVE)) )
 F_SC = ((N - 1)/k)*((sum(dat_SC_add$PVE))/(1 - sum(dat_SC_add$PVE))) 
 ```
 
 ```{r message=FALSE, warning=FALSE}
-mr_report(dat_SI, output_path = paste0(output_path, "TSMR_report/SmokingInitiation/"), study = "SI and AD")
-mr_report(dat_CPD, output_path = paste0(output_path, "TSMR_report/CigarettesPerDay/"), study = "CPD and AD")
-mr_report(dat_AI, output_path = paste0(output_path, "TSMR_report/AgeInitiation/"), study = "AI and AD")
-mr_report(dat_SC, output_path = paste0(output_path, "TSMR_report/SmokingCessation/"), study = "SC and AD")
+mr_report(dat_SI, 
+          output_path = paste0(output_path, "TSMR_report/SmokingInitiation/"), 
+          study = "SI and AD")
+mr_report(dat_CPD, 
+          output_path = paste0(output_path, "TSMR_report/CigarettesPerDay/"), 
+          study = "CPD and AD")
+mr_report(dat_AI, 
+          output_path = paste0(output_path, "TSMR_report/AgeInitiation/"), 
+          study = "AI and AD")
+mr_report(dat_SC, 
+          output_path = paste0(output_path, "TSMR_report/SmokingCessation/"), 
+          study = "SC and AD")
 ```
 
 
 ```{r}
 # MR PRESSO to detect horizontal pleiotropy
-presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
-                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_SI, 
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure",
+                   SdOutcome = "se.outcome", SdExposure = "se.exposure", 
+                   OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_SI, 
                    NbDistribution = 1000, SignifThreshold = 0.05)
 capture.output(print(presso), file = paste0(output_path, "MRPRESSO/SI_presso.txt"))
 
-presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
-                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_CPD, 
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", 
+                   SdOutcome = "se.outcome", SdExposure = "se.exposure", 
+                   OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_CPD, 
                    NbDistribution = 1000, SignifThreshold = 0.05)
 capture.output(print(presso), file = paste0(output_path, "MRPRESSO/CPD_presso.txt"))
 
-presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
-                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_AI, 
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", 
+                   SdOutcome = "se.outcome", SdExposure = "se.exposure", 
+                   OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_AI, 
                    NbDistribution = 1000, SignifThreshold = 0.05)
 capture.output(print(presso), file = paste0(output_path, "MRPRESSO/AI_presso.txt"))
 
-presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", SdOutcome = "se.outcome", 
-                   SdExposure = "se.exposure", OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_SC, 
+presso = mr_presso(BetaOutcome = "beta.outcome", BetaExposure = "beta.exposure", 
+                   SdOutcome = "se.outcome", SdExposure = "se.exposure", 
+                   OUTLIERtest = TRUE, DISTORTIONtest = TRUE, data = dat_SC, 
                    NbDistribution = 1000, SignifThreshold = 0.05)
 capture.output(print(presso), file = paste0(output_path, "MRPRESSO/SC_presso.txt"))
 ```
@@ -171,7 +213,8 @@ capture.output(print(presso), file = paste0(output_path, "MRPRESSO/SC_presso.txt
 # Part 2. Association check
 ```{r message=FALSE, warning=FALSE}
 rm(list = ls())
-lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, 
+       character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, epiflow, writexl)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
@@ -193,23 +236,27 @@ gene_add = paste0(health_behavior, ' + APOE2010_bin')
 ```{r}
 library(MASS)
 # fit ordered logit model and store results 'm'
-olm = polr(as.formula(paste('as.factor(cog_last_visit) ~ ever_smoke + ', demo_basic)), data = final_europ, Hess = TRUE)
+olm = polr(as.formula(paste('as.factor(cog_last_visit) ~ ever_smoke + ', demo_basic)), 
+           data = final_europ, Hess = TRUE)
 summary(olm)
 detach("package:MASS")
 ```
 
 ### 2) Back to multivariate regression
 ```{r}
-cind_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
+cind_normal = final_europ %>% 
+  filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
   mutate(cind_bin = if_else(cog_last_visit == 0, 0, 1)) 
 # dim = (7446,39)
-dementia_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
+dementia_normal = final_europ %>% 
+  filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
   mutate(dem_bin = if_else(cog_last_visit == 0, 0, 1))
 # dim = (6637,39)
 ```
 
 ```{r message=FALSE, warning=FALSE}
-smk_var_lst = c("ever_smoke", "current_smoke", "yrs_since_start", "age_stop_smk", "total_smk_yr")
+smk_var_lst = c("ever_smoke", "current_smoke", "yrs_since_start", 
+                "age_stop_smk", "total_smk_yr")
 lst_model = c('demo', 'health', 'apoe')
 
 # CIND
@@ -255,7 +302,8 @@ for (i in 1:length(smk_var_bin)) {
     f1 = as.formula(paste(smk_var, ' ~ ', prs_var, ' + ', gene_adj_basic))
     prs_demo = glm(f1, data = final_europ, family = 'binomial')
     or_result = make_OR_table("prs_demo", 2, paste0(prs_var, '_', smk_var, '_'))
-    if (i == 1 & j == 1) {prs_tbl_bin = or_result} else {prs_tbl_bin = rbind(prs_tbl_bin, or_result)}
+    if (i == 1 & j == 1) {prs_tbl_bin = or_result} 
+    else {prs_tbl_bin = rbind(prs_tbl_bin, or_result)}
   }
 }
 # Continuous
@@ -266,7 +314,8 @@ for (i in 1:length(smk_var_cont)) {
     f1 = as.formula(paste(smk_var, ' ~ ', prs_var, ' + ', gene_adj_basic))
     prs_demo = lm(f1, data = final_europ)
     or_result = make_coeff_table_lm("prs_demo", 2, paste0(prs_var, '_', smk_var, '_'))
-    if (i == 1 & j == 1) {prs_tbl_cont = or_result} else {prs_tbl_cont = rbind(prs_tbl_cont, or_result)}
+    if (i == 1 & j == 1) {prs_tbl_cont = or_result} 
+    else {prs_tbl_cont = rbind(prs_tbl_cont, or_result)}
   }
 }
 prs_tbl_cont$OR = NA
@@ -289,7 +338,8 @@ for (i in 1:length(prs_lst)) {
   f3 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', gene_add))
   apoe = glm(f3, data = cind_normal, family = 'binomial')
   or_result = make_OR_table(lst_model, 2, paste0('dem_', prs_var, '_'))
-  if (i == 1) {cind_prs_tbl = or_result} else {cind_prs_tbl = rbind(cind_prs_tbl, or_result)}
+  if (i == 1) {cind_prs_tbl = or_result} 
+  else {cind_prs_tbl = rbind(cind_prs_tbl, or_result)}
 }
 # Dementia
 for (i in 1:length(prs_lst)) {
@@ -301,7 +351,8 @@ for (i in 1:length(prs_lst)) {
   f3 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', gene_add))
   apoe = glm(f3, data = dementia_normal, family = 'binomial')
   or_result = make_OR_table(lst_model, 2, paste0('dem_', prs_var, '_'))
-  if (i == 1) {dem_prs_tbl = or_result} else {dem_prs_tbl = rbind(dem_prs_tbl, or_result)}
+  if (i == 1) {dem_prs_tbl = or_result} 
+  else {dem_prs_tbl = rbind(dem_prs_tbl, or_result)}
 }
 prs_cog_summary = rbind(cind_prs_tbl, dem_prs_tbl)
 ```
@@ -316,7 +367,8 @@ write_xlsx(sheets_OR, path = paste0(output_path, 'association_0124.xlsx'))
 # Part 3. One-sample MR
 ```{r message=FALSE, warning=FALSE}
 rm(list = ls())
-lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, 
+       character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, epiflow, writexl, AER, modelsummary)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
@@ -328,10 +380,12 @@ load(file = paste0(work_data_path, "modeling/final_europ_0124.rda"))
 
 ```{r}
 # Separate by cognitive status
-cind_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
+cind_normal = final_europ %>% 
+  filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
   mutate(cind_bin = if_else(cog_last_visit == 0, 0, 1)) 
 # dim = (7446,39)
-dementia_normal = final_europ %>% filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
+dementia_normal = final_europ %>% 
+  filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
   mutate(dem_bin = if_else(cog_last_visit == 0, 0, 1))
 # dim = (6637,39)
 gene_adj_basic = 'age + sex + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E + APOE2010_bin'
@@ -344,7 +398,8 @@ gene_add = paste0(health_behavior, ' + APOE2010_bin')
 ```{r}
 # Ever smoking
 f0 = as.formula(paste0('cind_bin ~ ever_smoke', ' + ', gene_add))
-f1 = as.formula(paste0('cind_bin ~ ever_smoke', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+f1 = as.formula(paste0('cind_bin ~ ever_smoke', ' + ', gene_adj_basic, 
+                       ' | PRS_SI + ', gene_add))
 # perform iv regression
 glm_ever = glm(f0, data = cind_normal, family = "binomial")
 iv_mod_ever = ivreg(f1, data = cind_normal)
@@ -354,25 +409,18 @@ summary(iv_mod_ever, diagnostics = TRUE)
 
 # Current smoking
 f0 = as.formula(paste0('cind_bin ~ current_smoke', ' + ', gene_add))
-f2 = as.formula(paste0('cind_bin ~ current_smoke', ' + ', gene_adj_basic, ' | PRS_SC + ', gene_add))
+f2 = as.formula(paste0('cind_bin ~ current_smoke', ' + ', gene_adj_basic, 
+                       ' | PRS_SI + ', gene_add))
 glm_current = glm(f0, data = cind_normal, family = "binomial")
 iv_mod_current = ivreg(f2, data = cind_normal)
 m_list = list(GLM = glm_current, IV = iv_mod_current)
 msummary(m_list)
 summary(iv_mod_current, diagnostics = TRUE)
 
-# Age stop smoking
-f0 = as.formula(paste0('cind_bin ~ age_stop_smk', ' + ', gene_add))
-f3 = as.formula(paste0('cind_bin ~ age_stop_smk', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
-glm_agestop = glm(f0, data = cind_normal, family = "binomial")
-iv_mod_agestop = ivreg(f3, data = cind_normal)
-m_list = list(GLM = glm_agestop, IV = iv_mod_agestop)
-msummary(m_list)
-summary(iv_mod_agestop, diagnostics = TRUE)
-
 # Total smoking years
 f0 = as.formula(paste0('cind_bin ~ total_smk_yr', ' + ', gene_add))
-f4 = as.formula(paste0('cind_bin ~ total_smk_yr', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+f4 = as.formula(paste0('cind_bin ~ total_smk_yr', ' + ', gene_adj_basic, 
+                       ' | PRS_SI + ', gene_add))
 glm_smkyr = glm(f0, data = cind_normal, family = "binomial")
 iv_mod_smkyr = ivreg(f4, data = cind_normal)
 m_list = list(GLM = glm_smkyr, IV = iv_mod_smkyr)
@@ -385,7 +433,8 @@ summary(iv_mod_smkyr, diagnostics = TRUE)
 ```{r}
 # Ever smoking
 f0 = as.formula(paste0('dem_bin ~ ever_smoke', ' + ', gene_add))
-f1 = as.formula(paste0('dem_bin ~ ever_smoke', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+f1 = as.formula(paste0('dem_bin ~ ever_smoke', ' + ', gene_adj_basic, 
+                       ' | PRS_SI + ', gene_add))
 # perform iv regression
 glm_ever = glm(f0, data = dementia_normal, family = "binomial")
 iv_mod_ever = ivreg(f1, data = dementia_normal)
@@ -395,7 +444,8 @@ summary(iv_mod_ever, diagnostics = TRUE)
 
 # Current smoking
 f0 = as.formula(paste0('dem_bin ~ current_smoke', ' + ', gene_add))
-f2 = as.formula(paste0('dem_bin ~ current_smoke', ' + ', gene_adj_basic, ' | PRS_SC + ', gene_add))
+f2 = as.formula(paste0('dem_bin ~ current_smoke', ' + ', gene_adj_basic, 
+                       ' | PRS_SC + ', gene_add))
 glm_current = glm(f0, data = dementia_normal, family = "binomial")
 iv_mod_current = ivreg(f2, data = dementia_normal)
 m_list = list(GLM = glm_current, IV = iv_mod_current)
@@ -404,7 +454,8 @@ summary(iv_mod_current, diagnostics = TRUE)
 
 # Age stop smoking
 f0 = as.formula(paste0('dem_bin ~ age_stop_smk', ' + ', gene_add))
-f3 = as.formula(paste0('dem_bin ~ age_stop_smk', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+f3 = as.formula(paste0('dem_bin ~ age_stop_smk', ' + ', gene_adj_basic, 
+                       ' | PRS_SI + ', gene_add))
 glm_agestop = glm(f0, data = dementia_normal, family = "binomial")
 iv_mod_agestop = ivreg(f3, data = dementia_normal)
 m_list = list(GLM = glm_agestop, IV = iv_mod_agestop)
@@ -413,7 +464,8 @@ summary(iv_mod_agestop, diagnostics = TRUE)
 
 # Total smoking years
 f0 = as.formula(paste0('dem_bin ~ total_smk_yr', ' + ', gene_add))
-f4 = as.formula(paste0('dem_bin ~ total_smk_yr', ' + ', gene_adj_basic, ' | PRS_SI + ', gene_add))
+f4 = as.formula(paste0('dem_bin ~ total_smk_yr', ' + ', gene_adj_basic, 
+                       ' | PRS_SI + ', gene_add))
 glm_smkyr = glm(f0, data = dementia_normal, family = "binomial")
 iv_mod_smkyr = ivreg(f4, data = dementia_normal)
 m_list = list(GLM = glm_smkyr, IV = iv_mod_smkyr)

@@ -11,7 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r message=FALSE, warning=FALSE}
 rm(list = ls())
-lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, 
+       character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, compareGroups, sjlabelled)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
@@ -36,7 +37,8 @@ final_sample_edit = final_sample_pre %>%
     stroke == 0 ~ 0,
     stroke > 0 ~ 1
   )) %>% rename(PRS_AD = prs_AD_norm) %>% 
-  mutate(PRS_SI = (-1)*prs_SI_norm, PRS_CPD = (-1)*prs_CPD_norm, PRS_AI = (-1)*prs_AI_norm, PRS_SC = (-1)*prs_SC_norm)
+  mutate(PRS_SI = (-1)*prs_SI_norm, PRS_CPD = (-1)*prs_CPD_norm, 
+         PRS_AI = (-1)*prs_AI_norm, PRS_SC = (-1)*prs_SC_norm)
 ```
 
 # 2. Sample selection 
@@ -47,56 +49,85 @@ age_restrict = final_sample_edit %>%
 dim(age_restrict) # dim = (12534,43)
 
 demo_status = age_restrict %>% 
-  filter(!is.na(age) & !is.na(sex) & !is.na(education) & !is.na(proxy) & !is.na(last_cog_wave)) 
+  filter(!is.na(age) & !is.na(sex) & !is.na(education) & 
+           !is.na(proxy) & !is.na(last_cog_wave)) 
 dim(demo_status) # dim = (12491,43)
 
 smk_status = demo_status %>% 
-  filter(!is.na(ever_smoke) | !is.na(current_smoke) | !is.na(cpd_now) | !is.na(cig_most) | !is.na(age_start_smk))
+  filter(!is.na(ever_smoke) | !is.na(current_smoke) | 
+           !is.na(cpd_now) | !is.na(cig_most) | !is.na(age_start_smk))
 dim(smk_status) # dim = (12422,43)
 
 final_eligible = smk_status %>% 
-  filter(!is.na(ever_drink) & !is.na(bmi) & !is.na(cesd) & !is.na(hypertension) & !is.na(diabetes) & !is.na(stroke) & !is.na(APOE2010_bin)) %>% 
-  dplyr::select(HHID, PN, last_cog_wave, age, sex, education, proxy, gen_ancestry, cog_last_visit, 
-         hrs_SI_GSCAN19, hrs_SI_TAG10, hrs_AD_Kunkle19, APOE2010_bin, PRS_SI, PRS_CPD, PRS_AI, PRS_SC, PRS_AD,
-         ever_smoke, current_smoke, cpd_now, age_start_smk, yrs_since_start, age_stop_smk, yrs_since_stop, total_smk_yr, cig_most,
-         ever_drink, bmi, cesd, hypertension, diabetes, stroke, PC1_5A, PC1_5B, PC1_5C, PC1_5D, PC1_5E)
+  filter(!is.na(ever_drink) & !is.na(bmi) & !is.na(cesd) & 
+           !is.na(hypertension) & !is.na(diabetes) & !is.na(stroke) & 
+           !is.na(APOE2010_bin)) %>% 
+  dplyr::select(HHID, PN, last_cog_wave, age, sex, education, proxy, 
+                gen_ancestry, cog_last_visit, hrs_SI_GSCAN19, hrs_SI_TAG10, 
+                hrs_AD_Kunkle19, APOE2010_bin, PRS_SI, PRS_CPD, PRS_AI, 
+                PRS_SC, PRS_AD, ever_smoke, current_smoke, cpd_now, 
+                age_start_smk, yrs_since_start, age_stop_smk, yrs_since_stop, 
+                total_smk_yr, cig_most, ever_drink, bmi, cesd, hypertension,
+                diabetes, stroke, PC1_5A, PC1_5B, PC1_5C, PC1_5D, PC1_5E)
 dim(final_eligible) # dim = (9636,38)
 
 final_europ = final_eligible %>% filter(gen_ancestry == "European") # N = 7708
 final_afric = final_eligible %>% filter(gen_ancestry == "African") # N = 1928
-save(final_europ, file = paste0(work_data_path, "modeling/final_europ_0124.rda"))
-save(final_afric, file = paste0(work_data_path, "modeling/final_afric_0124.rda"))
+save(final_europ, 
+     file = paste0(work_data_path, "modeling/final_europ_0124.rda"))
+save(final_afric, 
+     file = paste0(work_data_path, "modeling/final_afric_0124.rda"))
 ```
 
 # 3. Descriptive statistics
 ## 1) Univariate
 ```{r}
 eligible_nolabel = remove_all_labels(final_eligible) %>% 
-  mutate(sex = as.factor(sex), proxy = as.factor(proxy), cog_last_visit = as.factor(cog_last_visit), ever_smoke = as.factor(ever_smoke),
-         current_smoke = as.factor(current_smoke), ever_drink = as.factor(ever_drink), hypertension = as.factor(hypertension),
-         diabetes = as.factor(diabetes), stroke = as.factor(stroke), APOE2010_bin = as.factor(APOE2010_bin))
+  mutate(sex = as.factor(sex), proxy = as.factor(proxy), 
+         cog_last_visit = as.factor(cog_last_visit), 
+         ever_smoke = as.factor(ever_smoke),
+         current_smoke = as.factor(current_smoke), 
+         ever_drink = as.factor(ever_drink), 
+         hypertension = as.factor(hypertension),
+         diabetes = as.factor(diabetes), 
+         stroke = as.factor(stroke), 
+         APOE2010_bin = as.factor(APOE2010_bin))
 
-table_uni = descrTable(gen_ancestry ~ age + sex + education + proxy + last_cog_wave + cog_last_visit + ever_smoke + current_smoke + cpd_now + age_start_smk + 
-                         yrs_since_start + age_stop_smk + yrs_since_stop + total_smk_yr + cig_most + 
-                         ever_drink + bmi + cesd + hypertension + diabetes + stroke + APOE2010_bin,
+table_uni = descrTable(gen_ancestry ~ age + sex + education + proxy + 
+                         last_cog_wave + cog_last_visit + ever_smoke + 
+                         current_smoke + cpd_now + age_start_smk + 
+                         yrs_since_start + age_stop_smk + yrs_since_stop + 
+                         total_smk_yr + cig_most + ever_drink + bmi + cesd + 
+                         hypertension + diabetes + stroke + APOE2010_bin,
                        eligible_nolabel, show.all = T)
-compareGroups::export2csv(table_uni, file = paste0(output_path, 'univariate_ancestry.csv'))
+compareGroups::export2csv(table_uni, 
+                          file = paste0(output_path, 'univariate_ancestry.csv'))
 ```
 
 ## 2) Bivariate
 ```{r}
 # European sample
 europ_nolabel = remove_all_labels(final_europ) %>% 
-  mutate(sex = as.factor(sex), proxy = as.factor(proxy), cog_last_visit = as.factor(cog_last_visit), ever_smoke = as.factor(ever_smoke),
-         current_smoke = as.factor(current_smoke), ever_drink = as.factor(ever_drink), hypertension = as.factor(hypertension),
-         diabetes = as.factor(diabetes), stroke = as.factor(stroke), APOE2010_bin = as.factor(APOE2010_bin))
+  mutate(sex = as.factor(sex), proxy = as.factor(proxy), 
+         cog_last_visit = as.factor(cog_last_visit), 
+         ever_smoke = as.factor(ever_smoke),
+         current_smoke = as.factor(current_smoke), 
+         ever_drink = as.factor(ever_drink), 
+         hypertension = as.factor(hypertension),
+         diabetes = as.factor(diabetes), 
+         stroke = as.factor(stroke), 
+         APOE2010_bin = as.factor(APOE2010_bin))
 
-table_cog = descrTable(cog_last_visit ~ age + sex + education + proxy + last_cog_wave + ever_smoke + current_smoke + cpd_now + age_start_smk + 
-                         yrs_since_start + age_stop_smk + yrs_since_stop + total_smk_yr + cig_most + 
-                         ever_drink + bmi + cesd + hypertension + diabetes + stroke + APOE2010_bin +
-                         hrs_SI_GSCAN19 + hrs_SI_TAG10 + hrs_AD_Kunkle19 + PRS_SI + PRS_CPD + PRS_AI + PRS_SC + PRS_AD +
-                         PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E,
+table_cog = descrTable(cog_last_visit ~ age + sex + education + proxy + 
+                         last_cog_wave + ever_smoke + current_smoke + cpd_now + 
+                         age_start_smk + yrs_since_start + age_stop_smk + 
+                         yrs_since_stop + total_smk_yr + cig_most + ever_drink + 
+                         bmi + cesd + hypertension + diabetes + stroke + 
+                         APOE2010_bin + hrs_SI_GSCAN19 + hrs_SI_TAG10 + 
+                         hrs_AD_Kunkle19 + PRS_SI + PRS_CPD + PRS_AI + PRS_SC + 
+                         PRS_AD + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E,
                        europ_nolabel, show.all = T)
-compareGroups::export2csv(table_cog, file = paste0(output_path, 'bivar_cog_europ.csv'))
+compareGroups::export2csv(table_cog, 
+                          file = paste0(output_path, 'bivar_cog_europ.csv'))
 ```
 

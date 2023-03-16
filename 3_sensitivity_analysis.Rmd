@@ -12,7 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # Part 1. Reverse causation two-sample MR
 ```{r message=FALSE, warning=FALSE}
 rm(list = ls())
-lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, character.only = TRUE, unload = TRUE)
+lapply(paste('package:', names(sessionInfo()$otherPkgs), sep = ""), detach, 
+       character.only = TRUE, unload = TRUE)
 pacman::p_load(tidyverse, TwoSampleMR, MRPRESSO, LDlinkR)
 # Basic setups
 work_data_path = '/Users/Mingzhou/Desktop/AD_Grant/smk_dem_MR/data/'
@@ -27,19 +28,26 @@ awk -F"\t" '{if (NR==1||$8<=5e-08) print $0}' AD_Kunkle2019_EUR_hg19.txt > sig_A
 
 ## 2. Perform MR
 ```{r}
-selected_method = c("MR Egger", "Weighted median", "Inverse variance weighted", "Weighted mode")
-exposure_AD = read_exposure_data(paste0(work_data_path, "sumstats/sig_AD_Kunkle2019_EUR_hg19.txt"), sep = "\t", 
-                                 snp_col = "rsid", beta_col = "beta", se_col = "se", pval_col = "p", 
-                                 effect_allele_col = "a1", other_allele_col = "a0", clump = TRUE)
+selected_method = c("MR Egger", "Weighted median", 
+                    "Inverse variance weighted", "Weighted mode")
+exposure_AD = read_exposure_data(paste0(work_data_path, 
+                                        "sumstats/sig_AD_Kunkle2019_EUR_hg19.txt"), 
+                                 sep = "\t", snp_col = "rsid", beta_col = "beta", 
+                                 se_col = "se", pval_col = "p", 
+                                 effect_allele_col = "a1", 
+                                 other_allele_col = "a0", clump = TRUE)
 dim(exposure_AD) # dim = (20,14)
 ```
 
 ### 1) Smoking initiation
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # Get effects of instruments on outcome
-outcome_SI = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/SmokingInitiation.txt"), sep = "\t",
-                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+outcome_SI = read_outcome_data(snps = exposure_AD$SNP, 
+                               filename = paste0(work_data_path, "sumstats/SmokingInitiation.txt"), 
+                               sep = "\t", samplesize_col = "N", snp_col = "RSID", 
+                               beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", 
+                               other_allele_col = "ALT")
 
 # To detect if there is any IVs not available in outcome data
 missing = exposure_AD %>% filter(!SNP %in% outcome_SI$SNP) # 1 SNP missing
@@ -49,7 +57,8 @@ eligible = x[x$R2 >= 0.8, ]
 A = exposure_AD %>% filter(SNP %in% eligible$RS_Number) 
 Common = outcome_SI %>% filter(SNP %in% A$SNP) # no common SNPs
 # Harmonization of data
-dat_AD_SI = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_SI, action = 2)
+dat_AD_SI = harmonise_data(exposure_dat = exposure_AD, 
+                           outcome_dat = outcome_SI, action = 2)
 # Perform MR
 mr_SI_result = extract_MR(mr(dat_AD_SI), "smk_init", selected_method)
 ```
@@ -57,16 +66,21 @@ mr_SI_result = extract_MR(mr(dat_AD_SI), "smk_init", selected_method)
 ### 2) Cigarettes per day
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # Get effects of instruments on outcome
-outcome_CPD = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/CigarettesPerDay.txt"), sep = "\t",
-                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+outcome_CPD = read_outcome_data(snps = exposure_AD$SNP, 
+                                filename = paste0(work_data_path, 
+                                                  "sumstats/CigarettesPerDay.txt"), 
+                                sep = "\t", samplesize_col = "N", snp_col = "RSID", 
+                                beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                                eaf_col = "AF", effect_allele_col = "REF", 
+                                other_allele_col = "ALT")
 
 # To detect if there is any IVs not available in outcome data
 missing = exposure_AD %>% filter(!SNP %in% outcome_CPD$SNP) # 1 SNP missing
 # Find proxy SNP using LDlinkR
 Common = outcome_CPD %>% filter(SNP %in% A$SNP) # no common SNPs
 # Harmonization of data
-dat_AD_CPD = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_CPD, action = 2)
+dat_AD_CPD = harmonise_data(exposure_dat = exposure_AD, 
+                            outcome_dat = outcome_CPD, action = 2)
 # Perform MR
 mr_CPD_result = extract_MR(mr(dat_AD_CPD), "cig_per_day", selected_method)
 ```
@@ -74,16 +88,21 @@ mr_CPD_result = extract_MR(mr(dat_AD_CPD), "cig_per_day", selected_method)
 ### 3) Age of initiation
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # Get effects of instruments on outcome
-outcome_AI = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/AgeofInitiation.txt"), sep = "\t",
-                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+outcome_AI = read_outcome_data(snps = exposure_AD$SNP, 
+                               filename = paste0(work_data_path, 
+                                                 "sumstats/AgeofInitiation.txt"), 
+                               sep = "\t", samplesize_col = "N", snp_col = "RSID", 
+                               beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", 
+                               other_allele_col = "ALT")
 
 # To detect if there is any IVs not available in outcome data
 missing = exposure_AD %>% filter(!SNP %in% outcome_AI$SNP) # 1 SNP missing
 # Find proxy SNP using LDlinkR
 Common = outcome_AI %>% filter(SNP %in% A$SNP) # no common SNPs
 # Harmonization of data
-dat_AD_AI = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_AI, action = 2)
+dat_AD_AI = harmonise_data(exposure_dat = exposure_AD, 
+                           outcome_dat = outcome_AI, action = 2)
 # Perform MR
 mr_AI_result = extract_MR(mr(dat_AD_AI), "age_init", selected_method)
 ```
@@ -91,16 +110,21 @@ mr_AI_result = extract_MR(mr(dat_AD_AI), "age_init", selected_method)
 ### 4) Smoking cessation
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 # Get effects of instruments on outcome
-outcome_SC = read_outcome_data(snps = exposure_AD$SNP, filename = paste0(work_data_path, "sumstats/SmokingCessation.txt"), sep = "\t",
-                               samplesize_col = "N", snp_col = "RSID", beta_col = "BETA", se_col = "SE", pval_col = "P", 
-                               eaf_col = "AF", effect_allele_col = "REF", other_allele_col = "ALT")
+outcome_SC = read_outcome_data(snps = exposure_AD$SNP, 
+                               filename = paste0(work_data_path, 
+                                                 "sumstats/SmokingCessation.txt"), 
+                               sep = "\t", samplesize_col = "N", snp_col = "RSID", 
+                               beta_col = "BETA", se_col = "SE", pval_col = "P", 
+                               eaf_col = "AF", effect_allele_col = "REF", 
+                               other_allele_col = "ALT")
 
 # To detect if there is any IVs not available in outcome data
 missing = exposure_AD %>% filter(!SNP %in% outcome_SC$SNP) # 1 SNP missing
 # Find proxy SNP using LDlinkR
 Common = outcome_SC %>% filter(SNP %in% A$SNP) # no common SNPs
 # Harmonization of data
-dat_AD_SC = harmonise_data(exposure_dat = exposure_AD, outcome_dat = outcome_SC, action = 2)
+dat_AD_SC = harmonise_data(exposure_dat = exposure_AD, 
+                           outcome_dat = outcome_SC, action = 2)
 # Perform MR
 mr_SC_result = extract_MR(mr(dat_AD_SC), "smk_cess", selected_method)
 ```
@@ -110,4 +134,332 @@ mr_SC_result = extract_MR(mr(dat_AD_SC), "smk_cess", selected_method)
 AD_mr_result = rbind(mr_SI_result, mr_CPD_result, mr_AI_result, mr_SC_result)
 ```
 
+# Part 2. Forest plot for checking PGS associations
+```{r}
+var_names <- c('cog_last_visit', 'sex', 'ever_drink', 'hypertension', 
+               'diabetes', 'stroke', 'APOE2010_bin', # 7
+               'age', 'education', 'bmi', 'cesd', 'PRS_AD') # 5
+explanary_names <- c('Cognitive status', 'Sex', 'Drink status', 
+                     'Hypertension history', 'Diabetes history', 
+                     'Stroke history', 'APOE4 allele carrier', 
+                     'Age', 'Years of education', 'BMI', 'CESD score', 
+                     "PGS for Alzheimer's Disease")
 
+model <- lapply(var_names, function(x) {
+  lm(substitute(PRS_SI ~ i, list(i = as.name(x))), data = final_europ)
+})
+
+
+build_coef_table <- function(var_names, model) {
+  
+  summary_results <- lapply(model, summary)
+  
+  # Make to a full table
+  coef_table = array(NA, dim = c(length(var_names), 6))
+  
+  for (i in 1:length(var_names)) {
+    
+    coeff = summary_results[[i]]$coefficients[2]
+    # stderr = summary_results[[i]]$coefficients[4]
+    confinterval = confint(model[[i]], level = 0.95)
+    lower_CI = confinterval[2]
+    upper_CI = confinterval[4]
+    CI_95 = paste0(sprintf('%.2f', coeff), ' (', sprintf('%.2f',lower_CI), ', ', 
+                   sprintf('%.2f',upper_CI), ')')
+    
+    coef_table[i,1] = var_names[i]
+    coef_table[i,2] = length(summary_results[[i]]$residuals)
+    coef_table[i,3] = coeff
+    coef_table[i,4] = lower_CI
+    coef_table[i,5] = upper_CI
+    coef_table[i,6] = CI_95
+    
+    i = i + 1
+  }
+  
+  coef_table_final = as.data.frame(coef_table)
+  colnames(coef_table_final) = c('var_name', 'N', 'beta', 
+                                 'lower_CI', 'upper_CI', 'text')
+  
+  return(coef_table_final)
+}
+
+table1 <- build_coef_table(var_names, model)
+
+forest.data =
+  table1 %>% 
+  dplyr::select(beta, lower_CI, upper_CI) %>% 
+  mutate(sub = c('Categorical', rep(NA, 6), 
+                 'Continuous' , rep(NA, 4))) %>% 
+  mutate(beta = round(as.numeric(as.character(beta)), 3),
+         lower_CI = round(as.numeric(as.character(lower_CI)), 2),
+         upper_CI = round(as.numeric(as.character(upper_CI)), 2)) %>% 
+  mutate(class = c(rep(2, 7), rep(3, 5)))
+
+library(forestplot)
+
+tabletext <- cbind(
+  c("Category", "\n", forest.data$sub),
+  c("Exposure", "\n", explanary_names),
+  c("Beta coefficient (95% CI)", "\n", as.character(table1$text))
+)
+
+pop.cols <- c("black","black","black")
+
+```
+
+```{r}
+pdf(paste0(output_path, "PGS_SI_Forest.pdf"), width = 10, height = 5)
+forestplot(labeltext = tabletext, graph.pos = 1,
+           mean = c(NA, NA, forest.data$beta), 
+           lower = c(NA, NA, forest.data$lower_CI),
+           upper = c(NA, NA, forest.data$upper_CI),
+           
+           xticks = c(-0.2, -0.1, 0, 0.1, 0.2),
+           zero = 0,
+           
+           title = "Figure 1. Associations between covariates and smoking initiation polygenic risk score, Health and Retirement Study, 
+           European ancestry sample (n = 7708)",
+           xlab = "Effect Size of covariates on smoking initiation polygenic risk score (n_SNP = 257)",
+           
+           txt_gp = fpTxtGp(label = list(gpar(fontface = "bold", cex = 0.8, 
+                                              fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif")),
+                            ticks = gpar(cex = 0.6, fontfamily = "serif"),
+                            xlab = gpar(cex = 0.7, fontfamily = "serif"),
+                            title = gpar(cex = 1, fontfamily = "serif")),
+           col = fpColors(text = pop.cols[c(1, 1, forest.data$class)], 
+                          box  ="black",
+                          lines = "black", 
+                          zero ="gray50"),
+           
+           cex = 0.2, lineheight = "auto", boxsize = 0.25, 
+           lwd.ci = 1, ci.vertices = TRUE, ci.vertices.height = 0.15)
+dev.off()
+```
+
+```{r}
+pdf(paste0(output_path, "PGS_CPD_Forest.pdf"), width = 10, height = 5)
+forestplot(labeltext = tabletext, graph.pos = 1,
+           mean = c(NA, NA, forest.data$beta), 
+           lower = c(NA, NA, forest.data$lower_CI),
+           upper = c(NA, NA, forest.data$upper_CI),
+           
+           xticks = c(-0.2, -0.1, 0, 0.1, 0.2),
+           zero = 0,
+           
+           title = "Figure 1. Associations between covariates and smoking behavior polygenic risk scores, Health and Retirement Study, 
+           European ancestry sample (n = 7708)",
+           xlab = "Effect Size of covariates on cigarettes per day polygenic risk score (n_SNP = 183)",
+           
+           txt_gp = fpTxtGp(label = list(gpar(fontface = "bold", cex = 0.8, 
+                                              fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif")),
+                            ticks = gpar(cex = 0.6, fontfamily = "serif"),
+                            xlab = gpar(cex = 0.7, fontfamily = "serif"),
+                            title = gpar(cex = 1, fontfamily = "serif")),
+           col = fpColors(text = pop.cols[c(1, 1, forest.data$class)], 
+                          box  ="black",
+                          lines = "black", 
+                          zero ="gray50"),
+           
+           cex = 0.2, lineheight = "auto", boxsize = 0.25, 
+           lwd.ci = 1, ci.vertices = TRUE, ci.vertices.height = 0.15)
+dev.off()
+```
+
+```{r}
+pdf(paste0(output_path, "PGS_AI_Forest.pdf"), width = 10, height = 5)
+forestplot(labeltext = tabletext, graph.pos = 1,
+           mean = c(NA, NA, forest.data$beta), 
+           lower = c(NA, NA, forest.data$lower_CI),
+           upper = c(NA, NA, forest.data$upper_CI),
+           
+           xticks = c(-0.2, -0.1, 0, 0.1, 0.2),
+           zero = 0,
+           
+           title = "Figure 1. Associations between covariates and smoking behavior polygenic risk scores, Health and Retirement Study, 
+           European ancestry sample (n = 7708)",
+           xlab = "Effect Size of covariates on age initiation polygenic risk score (n_SNP = 12)",
+           
+           txt_gp = fpTxtGp(label = list(gpar(fontface = "bold", cex = 0.8, 
+                                              fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif")),
+                            ticks = gpar(cex = 0.6, fontfamily = "serif"),
+                            xlab = gpar(cex = 0.7, fontfamily = "serif"),
+                            title = gpar(cex = 1, fontfamily = "serif")),
+           col = fpColors(text = pop.cols[c(1, 1, forest.data$class)], 
+                          box  ="black",
+                          lines = "black", 
+                          zero ="gray50"),
+           
+           cex = 0.2, lineheight = "auto", boxsize = 0.25, 
+           lwd.ci = 1, ci.vertices = TRUE, ci.vertices.height = 0.15)
+dev.off()
+```
+
+```{r}
+pdf(paste0(output_path, "PGS_SC_Forest.pdf"), width = 10, height = 5)
+forestplot(labeltext = tabletext, graph.pos = 1,
+           mean = c(NA, NA, forest.data$beta), 
+           lower = c(NA, NA, forest.data$lower_CI),
+           upper = c(NA, NA, forest.data$upper_CI),
+           
+           xticks = c(-0.2, -0.1, 0, 0.1, 0.2),
+           zero = 0,
+           
+           title = "Figure 1. Associations between covariates and smoking behavior polygenic risk scores, Health and Retirement Study, 
+           European ancestry sample (n = 7708)",
+           xlab = "Effect Size of covariates on smoking cessation polygenic risk score (n_SNP = 29)",
+           
+           txt_gp = fpTxtGp(label = list(gpar(fontface = "bold", cex = 0.8, 
+                                              fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif"),
+                                         gpar(cex = 0.8, fontfamily = "serif")),
+                            ticks = gpar(cex = 0.6, fontfamily = "serif"),
+                            xlab = gpar(cex = 0.7, fontfamily = "serif"),
+                            title = gpar(cex = 1, fontfamily = "serif")),
+           col = fpColors(text = pop.cols[c(1, 1, forest.data$class)], 
+                          box  ="black",
+                          lines = "black", 
+                          zero ="gray50"),
+           
+           cex = 0.2, lineheight = "auto", boxsize = 0.25, 
+           lwd.ci = 1, ci.vertices = TRUE, ci.vertices.height = 0.15)
+dev.off()
+```
+
+# Part 3. AFR sample
+```{r}
+load(file = paste0(work_data_path, "modeling/final_afric_0124.rda"))
+```
+
+## 1. Smoking behaviors and cognition
+```{r}
+# Set up models
+demo_basic = 'age + sex + education + last_cog_wave + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E'
+health_behavior = paste0(demo_basic, ' + ever_drink + bmi + cesd + hypertension + diabetes + stroke')
+gene_add = paste0(health_behavior, ' + APOE2010_bin')
+```
+
+### 2) Back to multivariate regression
+```{r}
+cind_normal = final_afric %>% 
+  filter(cog_last_visit == 0 | cog_last_visit == 1) %>% 
+  mutate(cind_bin = if_else(cog_last_visit == 0, 0, 1)) 
+# dim = (1725,39)
+dementia_normal = final_afric %>% 
+  filter(cog_last_visit == 0 | cog_last_visit == 2) %>% 
+  mutate(dem_bin = if_else(cog_last_visit == 0, 0, 1))
+# dim = (1344,39)
+```
+
+```{r message=FALSE, warning=FALSE}
+smk_var_lst = c("ever_smoke", "current_smoke", "yrs_since_start", "age_stop_smk", "total_smk_yr")
+lst_model = c('demo', 'health', 'apoe')
+
+# CIND
+for (i in 1:length(smk_var_lst)) {
+  smk_var = smk_var_lst[i]
+  f1 = as.formula(paste('cind_bin ~ ', smk_var, ' + ', demo_basic))
+  demo = glm(f1, data = cind_normal, family = 'binomial')
+  f2 = as.formula(paste('cind_bin ~ ', smk_var, ' + ', health_behavior))
+  health = glm(f2, data = cind_normal, family = 'binomial')
+  f3 = as.formula(paste('cind_bin ~ ', smk_var, ' + ', gene_add))
+  apoe = glm(f3, data = cind_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('cind_', smk_var, '_'))
+  if (i == 1) {cind_tbl = or_result} else {cind_tbl = rbind(cind_tbl, or_result)}
+}
+# Dementia
+for (i in 1:length(smk_var_lst)) {
+  smk_var = smk_var_lst[i]
+  f1 = as.formula(paste('dem_bin ~ ', smk_var, ' + ', demo_basic))
+  demo = glm(f1, data = dementia_normal, family = 'binomial')
+  f2 = as.formula(paste('dem_bin ~ ', smk_var, ' + ', health_behavior))
+  health = glm(f2, data = dementia_normal, family = 'binomial')
+  f3 = as.formula(paste('dem_bin ~ ', smk_var, ' + ', gene_add))
+  apoe = glm(f3, data = dementia_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('dem_', smk_var, '_'))
+  if (i == 1) {dem_tbl = or_result} else {dem_tbl = rbind(dem_tbl, or_result)}
+}
+smk_cog_summary = rbind(cind_tbl, dem_tbl)
+```
+
+## 2. Smoking PGSs and smoking behaviors
+```{r message=FALSE, warning=FALSE}
+gene_adj_basic = 'age + sex + PC1_5A + PC1_5B + PC1_5C + PC1_5D + PC1_5E'
+smk_var_bin = c("ever_smoke", "current_smoke")
+smk_var_cont = c("age_start_smk", "yrs_since_start", "age_stop_smk", "total_smk_yr")
+prs_lst = c("PRS_SI", "PRS_CPD", "PRS_AI", "PRS_SC")
+# Binary
+for (i in 1:length(smk_var_bin)) {
+  smk_var = smk_var_bin[i]
+  for (j in 1:length(prs_lst)) {
+    prs_var = prs_lst[j]
+    f1 = as.formula(paste(smk_var, ' ~ ', prs_var, ' + ', gene_adj_basic))
+    prs_demo = glm(f1, data = final_afric, family = 'binomial')
+    or_result = make_OR_table("prs_demo", 2, paste0(prs_var, '_', smk_var, '_'))
+    if (i == 1 & j == 1) {prs_tbl_bin = or_result} 
+    else {prs_tbl_bin = rbind(prs_tbl_bin, or_result)}
+  }
+}
+# Continuous
+for (i in 1:length(smk_var_cont)) {
+  smk_var = smk_var_cont[i]
+  for (j in 1:length(prs_lst)) {
+    prs_var = prs_lst[j]
+    f1 = as.formula(paste(smk_var, ' ~ ', prs_var, ' + ', gene_adj_basic))
+    prs_demo = lm(f1, data = final_afric)
+    or_result = make_coeff_table_lm("prs_demo", 2, paste0(prs_var, '_', smk_var, '_'))
+    if (i == 1 & j == 1) {prs_tbl_cont = or_result} 
+    else {prs_tbl_cont = rbind(prs_tbl_cont, or_result)}
+  }
+}
+prs_tbl_cont$OR = NA
+prs_tbl_cont$`95% CI_OR` = NA
+pgs_smk_summary = rbind(prs_tbl_bin, prs_tbl_cont)
+```
+
+## 3. Smoking PGSs and cognition
+```{r message=FALSE, warning=FALSE}
+prs_lst = c("PRS_SI", "PRS_CPD", "PRS_AI", "PRS_SC")
+lst_model = c('demo', 'health', 'apoe')
+
+# CIND
+for (i in 1:length(prs_lst)) {
+  prs_var = prs_lst[i]
+  f1 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', demo_basic))
+  demo = glm(f1, data = cind_normal, family = 'binomial')
+  f2 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', health_behavior))
+  health = glm(f2, data = cind_normal, family = 'binomial')
+  f3 = as.formula(paste('cind_bin ~ ', prs_var, ' + ', gene_add))
+  apoe = glm(f3, data = cind_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('dem_', prs_var, '_'))
+  if (i == 1) {cind_prs_tbl = or_result} 
+  else {cind_prs_tbl = rbind(cind_prs_tbl, or_result)}
+}
+# Dementia
+for (i in 1:length(prs_lst)) {
+  prs_var = prs_lst[i]
+  f1 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', demo_basic))
+  demo = glm(f1, data = dementia_normal, family = 'binomial')
+  f2 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', health_behavior))
+  health = glm(f2, data = dementia_normal, family = 'binomial')
+  f3 = as.formula(paste('dem_bin ~ ', prs_var, ' + ', gene_add))
+  apoe = glm(f3, data = dementia_normal, family = 'binomial')
+  or_result = make_OR_table(lst_model, 2, paste0('dem_', prs_var, '_'))
+  if (i == 1) {dem_prs_tbl = or_result} 
+  else {dem_prs_tbl = rbind(dem_prs_tbl, or_result)}
+}
+prs_cog_summary = rbind(cind_prs_tbl, dem_prs_tbl)
+```
+
+## Output results
+```{r}
+sheets_OR = list('smk_cog' = smk_cog_summary, 'pgs_smk' = pgs_smk_summary,
+                 'pgs_cog' = prs_cog_summary)
+write_xlsx(sheets_OR, path = paste0(output_path, 'association_AFR_0124.xlsx'))
+```
