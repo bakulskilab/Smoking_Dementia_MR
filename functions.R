@@ -40,3 +40,39 @@ PVEfx = function(BETA, MAF, SE, N){
     ((2*(BETA^2)*MAF*(1 - MAF)) + ((SE^2)*2*N*MAF*(1 - MAF))) 
   return(pve) 
 } 
+
+#=================================================
+# Function to calculate OR and 95% CI from beta and SE
+calculate_or_and_ci = function(beta, se) {
+  # Calculate OR
+  or = exp(beta)
+  
+  # Calculate lower and upper bounds of 95% CI
+  ci_lower <- exp(beta - 1.96 * se)
+  ci_upper <- exp(beta + 1.96 * se)
+  
+  # Return results as a list
+  return(list(OR = or, CI_lower = ci_lower, CI_upper = ci_upper))
+}
+
+# Example usage:
+beta = 0.005        # Example beta coefficient
+se = 0.001   # Example standard error
+
+result <- calculate_or_and_ci(beta, se)
+print(result)
+
+#=================================================
+# Calculating for 10 additional years
+OR_1 = 1.01
+CI_lower_1 = 1.001
+CI_upper_1 = 1.02
+
+OR_10 = OR_1^10
+CI_lower_10 = CI_lower_1^10
+CI_upper_10 = CI_upper_1^10
+
+# Results
+OR_10
+CI_lower_10
+CI_upper_10
