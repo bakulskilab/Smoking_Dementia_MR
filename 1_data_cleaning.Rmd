@@ -79,6 +79,36 @@ save(final_afric,
      file = paste0(work_data_path, "modeling/final_afric_0124.rda"))
 ```
 
+```{r}
+# compare include vs. exclude
+eligible_group = final_eligible %>% mutate(group = "eligible")
+exclude_group = smk_status %>% select(names(final_eligible)) %>% 
+  anti_join(eligible_group) %>% 
+  mutate(group = "exclude")
+full_combine = rbind(eligible_group, exclude_group) %>% as.data.frame()
+full_combine_nolabel = remove_all_labels(full_combine) %>% 
+  mutate(sex = as.factor(sex), proxy = as.factor(proxy), 
+         cog_last_visit = as.factor(cog_last_visit), 
+         ever_smoke = as.factor(ever_smoke),
+         current_smoke = as.factor(current_smoke), 
+         ever_drink = as.factor(ever_drink), 
+         hypertension = as.factor(hypertension),
+         diabetes = as.factor(diabetes), 
+         stroke = as.factor(stroke), 
+         APOE2010_bin = as.factor(APOE2010_bin))
+
+table_inexc = descrTable(group ~ age + sex + gen_ancestry + education + proxy + 
+                         last_cog_wave + cog_last_visit + ever_smoke + 
+                         current_smoke + cpd_now + age_start_smk + 
+                         yrs_since_start + age_stop_smk + yrs_since_stop + 
+                         total_smk_yr + cig_most + ever_drink + bmi + cesd + 
+                         hypertension + diabetes + stroke + APOE2010_bin,
+                       full_combine_nolabel, show.all = T)
+compareGroups::export2csv(table_inexc, 
+                          file = paste0(output_path, 'in_exclude.csv'))
+```
+
+
 # 3. Descriptive statistics
 ## 1) Univariate
 ```{r}
